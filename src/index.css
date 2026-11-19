@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Lyxa Events brand: deep purple (#1E0A3C) on white, grey labels — same as the app. */
+@layer base {
+  :root {
+    --background: 260 25% 97%;
+    --foreground: 264 71% 14%;
+    --body: 247 19% 26%;
+    --card: 0 0% 100%;
+    --card-foreground: 264 71% 14%;
+    --primary: 264 71% 14%;
+    --primary-hover: 264 45% 26%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 260 25% 95%;
+    --secondary-foreground: 264 71% 14%;
+    --muted: 260 25% 96%;
+    --muted-foreground: 233 10% 48%;
+    --accent: 260 36% 95%;
+    --accent-foreground: 264 71% 14%;
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 151 68% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 37 90% 42%;
+    --warning-foreground: 0 0% 100%;
+    --border: 253 18% 90%;
+    --input: 253 18% 86%;
+    --ring: 264 71% 30%;
+    --sidebar: 264 71% 14%;
+    --sidebar-foreground: 0 0% 100%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background font-sans text-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply text-foreground;
+  }
+}
+
+@layer components {
+  .headline {
+    @apply font-black tracking-tight text-foreground;
+  }
+}

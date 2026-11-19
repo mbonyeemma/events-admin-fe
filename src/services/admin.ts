@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api, BASE_URL } from "@/lib/api";
 
 // Types mirror api/src/types/index.ts.
 
@@ -27,6 +27,16 @@ export interface EventSummary {
   name: string;
   venue: string;
   startsAt: string;
+  endsAt: string | null;
+  address: string | null;
+  eventType: string | null;
+  bannerId: string | null;
+  ticketImageId: string | null;
+  /** Most tickets that can be issued in total; null = no limit */
+  ticketLimit: number | null;
+  /** true = the limit can't be changed any more */
+  ticketLimitLocked: boolean;
+  ticketColor: string;
   gates: Gate[];
   ticketCount: number;
   admittedCount: number;
@@ -61,6 +71,8 @@ export interface Ticket {
   holderEmail: string | null;
   holderPhone: string | null;
   tier: string;
+  typeId: string | null;
+  price: number | null;
   status: TicketStatus;
   scannedAt: string | null;
   scannedGate: string | null;
@@ -87,7 +99,41 @@ export interface EventStats {
   checkedIn: number;
   notCheckedIn: number;
   voided: number;
-  tiers: Array<{ tier: string; sold: number; checkedIn: number }>;
+  revenue: number;
+  currency: string;
+  tiers: Array<{ tier: string; sold: number; checkedIn: number; revenue: number }>;
+}
+
+export interface TicketType {
+  id: string;
+  eventId: string;
+  name: string;
+  price: number;
+  currency: string;
+  /** null = no limit */
+  capacity: number | null;
+  notes: string | null;
+  /** null = the event's ticket colour */
+  color: string | null;
+  isActive: boolean;
+  issued: number;
+  checkedIn: number;
+  remaining: number | null;
+  revenue: number;
+}
+
+export type TicketTypeInput = { name: string; price: number; capacity: number | null; notes: string | null; color: string | null };
+
+export interface EventDetailsInput {
+  name: string;
+  venue: string;
+  startsAt: string;
+  endsAt: string | null;
+  address: string | null;
+  eventType: string | null;
+  bannerId: string | null;
+  ticketLimit: number | null;
+  ticketLimitLocked: boolean;
 }
 
 export interface Overview {
@@ -100,6 +146,7 @@ export interface Overview {
 
 export interface NewTicket {
   holderName: string;
+  typeId?: string;
   tier?: string;
   holderEmail?: string;
   holderPhone?: string;
@@ -128,11 +175,11 @@ export const listStaffEvents = (staffId: string) => api.get<StaffAssignment[]>(`
 // --- Events ---
 export const listEvents = () => api.get<EventSummary[]>("/admin/events");
 export const getEvent = (eventId: string) => api.get<EventSummary>(`/admin/events/${eventId}`);
-export const createEvent = (body: { name: string; venue: string; startsAt: string; gates: string[]; accessCode?: string }) =>
+export const createEvent = (body: EventDetailsInput & { gates: string[]; accessCode?: string }) =>
   api.post<EventSummary>("/admin/events", body);
 export const updateEvent = (
   eventId: string,
-  body: Partial<{ name: string; venue: string; startsAt: string; isActive: boolean; accessCode: string }>
+  body: Partial<EventDetailsInput & { isActive: boolean; accessCode: string; ticketColor: string; ticketImageId: string | null }>
 ) => api.put<EventSummary>(`/admin/events/${eventId}`, body);
 export const deleteEvent = (eventId: string) => api.del(`/admin/events/${eventId}`);
 export const getEventStats = (eventId: string) => api.get<EventStats>(`/admin/events/${eventId}/stats`);
@@ -162,3 +209,17 @@ export const resetTicket = (code: string) => api.put<Ticket>(`/admin/tickets/${e
 // --- Scans ---
 export const listScans = (eventId: string, params: { outcome?: string; limit: number; offset: number }) =>
   api.get<ScanLog[]>(`/admin/events/${eventId}/scans`, params);
+
+// --- Ticket types ---
+export const listTicketTypes = (eventId: string) => api.get<TicketType[]>(`/admin/events/${eventId}/ticket-types`);
+export const createTicketType = (eventId: string, body: TicketTypeInput) =>
+  api.post<TicketType>(`/admin/events/${eventId}/ticket-types`, body);
+export const updateTicketType = (eventId: string, typeId: string, body: Partial<TicketTypeInput & { isActive: boolean }>) =>
+  api.put<TicketType>(`/admin/events/${eventId}/ticket-types/${typeId}`, body);
+export const deleteTicketType = (eventId: string, typeId: string) => api.del(`/admin/events/${eventId}/ticket-types/${typeId}`);
+
+// --- Images (event banners, ticket artwork) ---
+export const uploadImage = (dataUrl: string) =>
+  api.post<{ id: string; url: string; contentType: string; size: number }>("/admin/media", { data: dataUrl });
+/** Absolute URL of an uploaded image. */
+export const mediaUrl = (id: string | null | undefined) => (id ? `${BASE_URL}/media/${id}` : null);

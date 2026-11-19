@@ -13,7 +13,7 @@ Stack (same as the sendcash admin): Vite, React 18, TypeScript, Tailwind CSS, Ta
   - the next events with live progress, and the latest scans across events
 - **Events:**
   - list with Upcoming / Past / All and search
-  - create an event with its gates and an optional event code
+  - create an event with a banner, type, venue and address, start and end, total tickets (optionally fixed for good), gates and an optional event code
 - **Event page:** check-in progress overall and per tier, and these tabs:
   - **Tickets:**
     - search, filter (not in / checked in / void), export to CSV
@@ -25,7 +25,9 @@ Stack (same as the sendcash admin): Vite, React 18, TypeScript, Tailwind CSS, Ta
   - **Gates:** add, rename, remove (checkers posted at a removed gate can pick any gate).
   - **Scan log:** every scan with gate, checker and result; filter by result; refreshes live while the event runs.
   - **Settings:**
-    - edit name, venue and start
+    - edit the event details (banner, type, location, times, total tickets)
+    - **ticket types**: e.g. Ordinary, VIP 1, VIP 2, Table, each with price (type 200k), quantity, notes and colour; turn off or delete unused ones
+    - **ticket design**: colour and ticket image, with a live preview per type; "Ticket" in a ticket's panel downloads the designed ticket with its QR code
     - show, regenerate or set the event code
     - activate or deactivate
     - delete (only while the event has no tickets)

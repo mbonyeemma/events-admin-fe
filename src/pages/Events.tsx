@@ -22,7 +22,7 @@ import {
   TR,
 } from "@/components/ui";
 import { EventStatusBadge } from "@/components/StatusBadges";
-import { EventForm, emptyEvent, validateEvent, type EventFormValues } from "@/components/EventForm";
+import { EventForm, emptyEvent, formToInput, validateEvent, type EventFormValues } from "@/components/EventForm";
 import { DateTile } from "@/pages/Dashboard";
 import { eventPhase, formatDate, formatNumber, formatTime, percent } from "@/lib/utils";
 import { createEvent, listEvents } from "@/services/admin";
@@ -41,9 +41,7 @@ export function NewEventModal({ open, onClose }: { open: boolean; onClose: () =>
     setSaving(true);
     try {
       const res = await createEvent({
-        name: values.name.trim(),
-        venue: values.venue.trim(),
-        startsAt: new Date(values.startsAt).toISOString(),
+        ...formToInput(values),
         gates: values.gates,
         ...(values.accessCode ? { accessCode: values.accessCode } : {}),
       });
@@ -77,7 +75,7 @@ export function NewEventModal({ open, onClose }: { open: boolean; onClose: () =>
         </>
       }
     >
-      <EventForm values={values} onChange={setValues} withGates />
+      <EventForm values={values} onChange={setValues} creating />
     </Modal>
   );
 }

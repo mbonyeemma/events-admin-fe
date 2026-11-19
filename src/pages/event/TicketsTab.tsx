@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
-import { Download, FileUp, Plus, Search, Ticket as TicketIcon } from "lucide-react";
+import { Download, FileUp, Image as ImageIcon, Plus, Search, Ticket as TicketIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   Button,
@@ -14,6 +14,7 @@ import {
   Modal,
   Pagination,
   Segmented,
+  Select,
   Table,
   TBody,
   TD,
@@ -24,16 +25,20 @@ import {
   useConfirm,
 } from "@/components/ui";
 import { TicketStatusBadge } from "@/components/StatusBadges";
-import { download, formatDateTime, parseCsv, toCsv } from "@/lib/utils";
+import { download, formatDateTime, formatMoney, parseCsv, toCsv } from "@/lib/utils";
+import { ticketPng } from "@/lib/ticketArt";
 import {
   issueTickets,
   listTickets,
+  listTicketTypes,
+  mediaUrl,
   resetTicket,
   updateTicket,
   voidTicket,
   type EventSummary,
   type NewTicket,
   type Ticket,
+  type TicketType,
 } from "@/services/admin";
 import { refreshEvent } from "./refresh";
 
@@ -91,16 +96,44 @@ function rowsToTickets(text: string): { tickets: NewTicket[]; errors: string[] }
   return { tickets, errors };
 }
 
-function IssueTicketsModal({ event, open, onClose }: { event: EventSummary; open: boolean; onClose: () => void }) {
+/** Match each row's tier text to a ticket type (any case); one active type is the default. */
+function withTypes(parsed: { tickets: NewTicket[]; errors: string[] }, rawTiers: boolean[], types: TicketType[]) {
+  if (types.length === 0) return parsed;
+  const active = types.filter((t) => t.isActive);
+  const errors = [...parsed.errors];
+  const tickets = parsed.tickets.map((t, i) => {
+    const given = rawTiers[i] ? t.tier!.trim().toLowerCase() : "";
+    const type = given ? types.find((x) => x.name.toLowerCase() === given) : active.length === 1 ? active[0] : undefined;
+    if (!type) errors.push(given ? `Row ${i + 1}: no "${t.tier}" ticket type` : `Row ${i + 1}: add the ticket type (${active.map((x) => x.name).join(", ")})`);
+    else if (!type.isActive) errors.push(`Row ${i + 1}: ${type.name} tickets are turned off`);
+    const { tier: _tier, ...rest } = t;
+    return type ? { ...rest, typeId: type.id } : t;
+  });
+  return { tickets, errors };
+}
+
+function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummary; types: TicketType[]; open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const [mode, setMode] = useState<"one" | "bulk">("one");
-  const [one, setOne] = useState({ holderName: "", tier: DEFAULT_TIER, holderEmail: "", holderPhone: "", quantity: "1" });
+  const active = types.filter((t) => t.isActive);
+  const firstOpen = active.find((t) => t.remaining !== 0) ?? active[0];
+  const blank = () => ({ holderName: "", tier: DEFAULT_TIER, typeId: firstOpen?.id ?? "", holderEmail: "", holderPhone: "", quantity: "1" });
+  const [one, setOne] = useState(blank);
   const [csv, setCsv] = useState("");
   const [saving, setSaving] = useState(false);
-  const parsed = useMemo(() => rowsToTickets(csv), [csv]);
+  const parsed = useMemo(() => {
+    const raw = rowsToTickets(csv);
+    const rawTiers = raw.tickets.map((t) => t.tier !== undefined && t.tier !== DEFAULT_TIER);
+    return withTypes(raw, rawTiers, types);
+  }, [csv, types]);
+  const selected = types.find((t) => t.id === one.typeId) ?? null;
+
+  useEffect(() => {
+    if (open && !one.typeId && firstOpen) setOne((o) => ({ ...o, typeId: firstOpen.id }));
+  }, [open, firstOpen, one.typeId]);
 
   const reset = () => {
-    setOne({ holderName: "", tier: DEFAULT_TIER, holderEmail: "", holderPhone: "", quantity: "1" });
+    setOne(blank());
     setCsv("");
   };
 
@@ -110,7 +143,10 @@ function IssueTicketsModal({ event, open, onClose }: { event: EventSummary; open
       const qty = Math.floor(Number(one.quantity));
       if (!one.holderName.trim()) return toast.error("Enter the ticket holder's name.");
       if (!(qty >= 1 && qty <= 100)) return toast.error("Quantity must be 1 to 100.");
-      const base: NewTicket = { holderName: one.holderName.trim(), tier: one.tier.trim() || DEFAULT_TIER };
+      if (active.length > 0 && !selected) return toast.error("Choose the ticket type.");
+      if (selected?.remaining !== null && selected?.remaining !== undefined && qty > selected.remaining)
+        return toast.error(selected.remaining === 0 ? `${selected.name} is sold out.` : `Only ${selected.remaining} ${selected.name} tickets left.`);
+      const base: NewTicket = selected ? { holderName: one.holderName.trim(), typeId: selected.id } : { holderName: one.holderName.trim(), tier: one.tier.trim() || DEFAULT_TIER };
       if (one.holderEmail.trim()) base.holderEmail = one.holderEmail.trim();
       if (one.holderPhone.trim()) base.holderPhone = one.holderPhone.trim();
       tickets = Array.from({ length: qty }, () => ({ ...base }));
@@ -178,15 +214,22 @@ function IssueTicketsModal({ event, open, onClose }: { event: EventSummary; open
               <Input type="number" min={1} max={100} value={one.quantity} onChange={(e) => setOne({ ...one, quantity: e.target.value })} />
             </Field>
           </div>
-          <Field label="Tier">
-            <Input value={one.tier} onChange={(e) => setOne({ ...one, tier: e.target.value })} maxLength={60} list="tiers" />
-            <datalist id="tiers">
-              <option value="General Admission" />
-              <option value="VIP" />
-              <option value="VVIP" />
-              <option value="Early Bird" />
-            </datalist>
-          </Field>
+          {active.length > 0 ? (
+            <Field label="Ticket type" hint={selected?.notes ?? undefined}>
+              <Select value={one.typeId} onChange={(e) => setOne({ ...one, typeId: e.target.value })}>
+                {active.map((t) => (
+                  <option key={t.id} value={t.id} disabled={t.remaining === 0}>
+                    {t.name} — {t.price === 0 ? "Free" : formatMoney(t.price, t.currency)}
+                    {t.remaining !== null ? ` · ${t.remaining === 0 ? "sold out" : `${t.remaining} left`}` : ""}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <Field label="Tier" hint="Add ticket types with prices in Settings to sell VIP, Table, and so on.">
+              <Input value={one.tier} onChange={(e) => setOne({ ...one, tier: e.target.value })} maxLength={60} />
+            </Field>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Email (optional)">
               <Input type="email" value={one.holderEmail} onChange={(e) => setOne({ ...one, holderEmail: e.target.value })} maxLength={150} />
@@ -203,8 +246,8 @@ function IssueTicketsModal({ event, open, onClose }: { event: EventSummary; open
             label="Rows"
             hint={
               <>
-                One ticket per line: <span className="font-mono">name, tier, email, phone, code</span>. Only the name is required; a header row is
-                optional.
+                One ticket per line: <span className="font-mono">name, {types.length ? "ticket type" : "tier"}, email, phone, code</span>.
+                {types.length ? ` Ticket types: ${active.map((t) => t.name).join(", ")}.` : " Only the name is required."} A header row is optional.
               </>
             }
           >
@@ -239,7 +282,16 @@ function IssueTicketsModal({ event, open, onClose }: { event: EventSummary; open
                   {parsed.tickets.slice(0, 5).map((t, i) => (
                     <TR key={i}>
                       <TD className="py-2 font-semibold text-foreground">{t.holderName}</TD>
-                      <TD className="py-2">{t.tier}</TD>
+                      <TD className="py-2">
+                        {t.typeId ? (
+                          <>
+                            {types.find((x) => x.id === t.typeId)?.name}
+                            <span className="ml-1 text-xs text-muted-foreground">{formatMoney(types.find((x) => x.id === t.typeId)?.price, types.find((x) => x.id === t.typeId)?.currency)}</span>
+                          </>
+                        ) : (
+                          t.tier
+                        )}
+                      </TD>
                       <TD className="py-2 text-xs text-muted-foreground">{[t.holderEmail, t.holderPhone].filter(Boolean).join(" · ")}</TD>
                       <TD className="py-2 font-mono text-xs">{t.ticketCode ?? "auto"}</TD>
                     </TR>
@@ -257,11 +309,12 @@ function IssueTicketsModal({ event, open, onClose }: { event: EventSummary; open
 
 /* --------------------------- One ticket --------------------------- */
 
-function TicketModal({ ticket, event, onClose }: { ticket: Ticket | null; event: EventSummary; onClose: () => void }) {
+function TicketModal({ ticket, event, types, onClose }: { ticket: Ticket | null; event: EventSummary; types: TicketType[]; onClose: () => void }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [qr, setQr] = useState("");
-  const [form, setForm] = useState({ holderName: "", tier: "", holderEmail: "", holderPhone: "" });
+  const [form, setForm] = useState({ holderName: "", tier: "", typeId: "", holderEmail: "", holderPhone: "" });
+  const [drawing, setDrawing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
@@ -269,6 +322,7 @@ function TicketModal({ ticket, event, onClose }: { ticket: Ticket | null; event:
     setForm({
       holderName: ticket.holderName,
       tier: ticket.tier,
+      typeId: ticket.typeId ?? "",
       holderEmail: ticket.holderEmail ?? "",
       holderPhone: ticket.holderPhone ?? "",
     });
@@ -294,6 +348,7 @@ function TicketModal({ ticket, event, onClose }: { ticket: Ticket | null; event:
   const dirty =
     form.holderName !== ticket.holderName ||
     form.tier !== ticket.tier ||
+    form.typeId !== (ticket.typeId ?? "") ||
     form.holderEmail !== (ticket.holderEmail ?? "") ||
     form.holderPhone !== (ticket.holderPhone ?? "");
 
@@ -359,7 +414,11 @@ function TicketModal({ ticket, event, onClose }: { ticket: Ticket | null; event:
                 () =>
                   updateTicket(ticket.ticketId, {
                     holderName: form.holderName.trim(),
-                    tier: form.tier.trim() || DEFAULT_TIER,
+                    ...(types.length > 0
+                      ? form.typeId && form.typeId !== ticket.typeId
+                        ? { typeId: form.typeId }
+                        : {}
+                      : { tier: form.tier.trim() || DEFAULT_TIER }),
                     holderEmail: form.holderEmail.trim(),
                     holderPhone: form.holderPhone.trim(),
                   }),
@@ -379,6 +438,38 @@ function TicketModal({ ticket, event, onClose }: { ticket: Ticket | null; event:
             <Button variant="ghost" size="sm" disabled={!qr} onClick={() => fetch(qr).then((r) => r.blob()).then((b) => download(`${ticket.ticketId}.png`, b))}>
               <Download className="h-4 w-4" /> QR code
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              loading={drawing}
+              onClick={async () => {
+                setDrawing(true);
+                try {
+                  const type = types.find((t) => t.id === ticket.typeId);
+                  const png = await ticketPng({
+                    eventName: event.name,
+                    startsAt: event.startsAt,
+                    endsAt: event.endsAt,
+                    venue: event.venue,
+                    address: event.address,
+                    holderName: ticket.holderName,
+                    typeName: ticket.tier,
+                    price: ticket.price,
+                    currency: type?.currency ?? "UGX",
+                    code: ticket.ticketId,
+                    color: type?.color ?? event.ticketColor,
+                    imageUrl: mediaUrl(event.ticketImageId ?? event.bannerId),
+                  });
+                  download(`${ticket.ticketId}.png`, png);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Couldn't draw the ticket.");
+                } finally {
+                  setDrawing(false);
+                }
+              }}
+            >
+              {!drawing && <ImageIcon className="h-4 w-4" />} Ticket
+            </Button>
             <CopyButton value={ticket.ticketId} label="Copy ticket code" />
           </div>
         </div>
@@ -393,9 +484,24 @@ function TicketModal({ ticket, event, onClose }: { ticket: Ticket | null; event:
           <Field label="Holder name">
             <Input value={form.holderName} onChange={(e) => setForm({ ...form, holderName: e.target.value })} maxLength={150} />
           </Field>
-          <Field label="Tier">
-            <Input value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })} maxLength={60} />
-          </Field>
+          {types.length > 0 ? (
+            <Field label="Ticket type" hint={ticket.price !== null ? `Paid ${ticket.price === 0 ? "nothing (free)" : formatMoney(ticket.price)}` : undefined}>
+              <Select value={form.typeId} onChange={(e) => setForm({ ...form, typeId: e.target.value })}>
+                {!ticket.typeId && <option value="">{ticket.tier} (no type)</option>}
+                {types
+                  .filter((t) => t.isActive || t.id === ticket.typeId)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} — {t.price === 0 ? "Free" : formatMoney(t.price, t.currency)}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          ) : (
+            <Field label="Tier">
+              <Input value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })} maxLength={60} />
+            </Field>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Email">
               <Input value={form.holderEmail} onChange={(e) => setForm({ ...form, holderEmail: e.target.value })} maxLength={150} />
@@ -413,6 +519,10 @@ function TicketModal({ ticket, event, onClose }: { ticket: Ticket | null; event:
 /* --------------------------- Tab --------------------------- */
 
 export default function TicketsTab({ event }: { event: EventSummary }) {
+  const { data: types = [] } = useQuery({
+    queryKey: ["ticket-types", event.id],
+    queryFn: () => listTicketTypes(event.id).then((r) => r.data ?? []),
+  });
   const [status, setStatus] = useState<StatusFilter>("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -439,8 +549,8 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
         if (all.length >= (res.data?.total ?? 0) || (res.data?.tickets.length ?? 0) === 0) break;
       }
       const rows = [
-        ["Ticket code", "Holder", "Tier", "Email", "Phone", "Status", "Checked in at", "Gate", "Checked in by"],
-        ...all.map((t) => [t.ticketId, t.holderName, t.tier, t.holderEmail, t.holderPhone, t.status, t.scannedAt, t.scannedGate, t.scannedByName]),
+        ["Ticket code", "Holder", "Ticket type", "Price", "Email", "Phone", "Status", "Checked in at", "Gate", "Checked in by"],
+        ...all.map((t) => [t.ticketId, t.holderName, t.tier, t.price, t.holderEmail, t.holderPhone, t.status, t.scannedAt, t.scannedGate, t.scannedByName]),
       ];
       download(`${event.name.replace(/[^\w]+/g, "-").toLowerCase()}-tickets.csv`, toCsv(rows));
     } catch {
@@ -501,7 +611,7 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
                 <TR>
                   <TH>Holder</TH>
                   <TH>Ticket</TH>
-                  <TH>Tier</TH>
+                  <TH>{types.length ? "Ticket type" : "Tier"}</TH>
                   <TH>Status</TH>
                   <TH>Checked in</TH>
                 </TR>
@@ -514,7 +624,13 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
                       <div className="text-xs text-muted-foreground">{[t.holderEmail, t.holderPhone].filter(Boolean).join(" · ") || "—"}</div>
                     </TD>
                     <TD className="font-mono text-xs">{t.ticketId}</TD>
-                    <TD className="whitespace-nowrap">{t.tier}</TD>
+                    <TD className="whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        {t.typeId && <span className="h-2.5 w-2.5 rounded-full" style={{ background: types.find((x) => x.id === t.typeId)?.color ?? event.ticketColor }} />}
+                        {t.tier}
+                      </div>
+                      {t.price !== null && <div className="text-xs text-muted-foreground">{t.price === 0 ? "Free" : formatMoney(t.price)}</div>}
+                    </TD>
                     <TD>
                       <TicketStatusBadge status={t.status} />
                     </TD>
@@ -537,8 +653,8 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
         )}
       </Card>
 
-      <IssueTicketsModal event={event} open={issuing} onClose={() => setIssuing(false)} />
-      <TicketModal ticket={open} event={event} onClose={() => setOpen(null)} />
+      <IssueTicketsModal event={event} types={types} open={issuing} onClose={() => setIssuing(false)} />
+      <TicketModal ticket={open} event={event} types={types} onClose={() => setOpen(null)} />
     </div>
   );
 }

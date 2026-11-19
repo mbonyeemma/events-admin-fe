@@ -4,24 +4,25 @@ import { useNavigate } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, CopyButton, Input, Switch, useConfirm } from "@/components/ui";
-import { EventForm, validateEvent, type EventFormValues } from "@/components/EventForm";
-import { toLocalInput } from "@/lib/utils";
+import { EventForm, eventToForm, formToInput, validateEvent, type EventFormValues } from "@/components/EventForm";
 import { deleteEvent, updateEvent, type EventSummary } from "@/services/admin";
+import { TicketTypesCard } from "./TicketTypesCard";
+import { TicketDesignCard } from "./TicketDesignCard";
 import { refreshEvent } from "./refresh";
 
 export default function SettingsTab({ event, ticketCount }: { event: EventSummary; ticketCount: number }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const confirm = useConfirm();
-  const initial = (): EventFormValues => ({ name: event.name, venue: event.venue, startsAt: toLocalInput(event.startsAt), gates: [], accessCode: "" });
-  const [values, setValues] = useState<EventFormValues>(initial);
+  const [values, setValues] = useState<EventFormValues>(() => eventToForm(event));
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Pick up changes saved elsewhere (or by another admin).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => setValues(initial()), [event.name, event.venue, event.startsAt]);
+  useEffect(() => setValues(eventToForm(event)), [JSON.stringify(eventToForm(event))]);
 
-  const dirty = values.name !== event.name || values.venue !== event.venue || values.startsAt !== toLocalInput(event.startsAt);
+  const dirty = JSON.stringify(formToInput(values)) !== JSON.stringify(formToInput(eventToForm(event)));
 
   const run = async (name: string, work: () => Promise<unknown>, done: string) => {
     setBusy(name);
@@ -37,14 +38,18 @@ export default function SettingsTab({ event, ticketCount }: { event: EventSummar
     }
   };
 
-  const saveDetails = () => {
+  const saveDetails = async () => {
     const error = validateEvent(values, false);
     if (error) return toast.error(error);
-    run(
-      "details",
-      () => updateEvent(event.id, { name: values.name.trim(), venue: values.venue.trim(), startsAt: new Date(values.startsAt).toISOString() }),
-      "Event updated."
-    );
+    if (values.ticketLimitLocked && !event.ticketLimitLocked) {
+      const ok = await confirm({
+        title: `Fix the total at ${Number(values.ticketLimit).toLocaleString()} tickets?`,
+        message: "Once fixed, the total number of tickets for this event can't be changed.",
+        confirmLabel: "Fix it",
+      });
+      if (!ok) return;
+    }
+    run("details", () => updateEvent(event.id, formToInput(values)), "Event updated.");
   };
 
   const changeCode = async (next: string) => {
@@ -72,7 +77,7 @@ export default function SettingsTab({ event, ticketCount }: { event: EventSummar
   const remove = async () => {
     const ok = await confirm({
       title: `Delete ${event.name}?`,
-      message: "Its gates and ticket checker assignments are removed too. This can't be undone.",
+      message: "Its gates, ticket types and ticket checker assignments are removed too. This can't be undone.",
       confirmLabel: "Delete event",
       danger: true,
     });
@@ -90,16 +95,16 @@ export default function SettingsTab({ event, ticketCount }: { event: EventSummar
   };
 
   return (
-    <div className="grid max-w-3xl gap-6">
+    <div className="grid max-w-4xl gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Details</CardTitle>
+          <CardTitle>Event details</CardTitle>
         </CardHeader>
         <CardContent>
           <EventForm values={values} onChange={setValues} />
-          <div className="mt-4 flex justify-end gap-2">
+          <div className="mt-5 flex justify-end gap-2">
             {dirty && (
-              <Button variant="outline" onClick={() => setValues(initial())}>
+              <Button variant="outline" onClick={() => setValues(eventToForm(event))}>
                 Reset
               </Button>
             )}
@@ -109,6 +114,10 @@ export default function SettingsTab({ event, ticketCount }: { event: EventSummar
           </div>
         </CardContent>
       </Card>
+
+      <TicketTypesCard event={event} />
+
+      <TicketDesignCard event={event} />
 
       <Card>
         <CardHeader className="flex-col items-start">

@@ -134,3 +134,69 @@ export function download(filename: string, content: string | Blob, type = "text/
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** "UGX 200,000" */
+export function formatMoney(amount: number | null | undefined, currency = "UGX"): string {
+  if (amount === null || amount === undefined) return "—";
+  return `${currency} ${Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
+
+/** "200k" → 200000, "1.5m" → 1500000, "700,000" → 700000. null when it isn't an amount. */
+export function parseAmount(text: string): number | null {
+  const m = text.trim().toLowerCase().replace(/[,\s]/g, "").replace(/^ugx/, "").match(/^(\d+(?:\.\d+)?)([km]?)$/);
+  if (!m) return null;
+  const n = Number(m[1]) * (m[2] === "k" ? 1_000 : m[2] === "m" ? 1_000_000 : 1);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+
+export const EVENT_TYPES = [
+  "Concert",
+  "Party",
+  "Festival",
+  "Comedy",
+  "Conference",
+  "Seminar or talk",
+  "Workshop",
+  "Sports",
+  "Exhibition",
+  "Church event",
+  "Gala or dinner",
+  "Other",
+];
+
+export const TICKET_COLORS = ["#1E0A3C", "#7C3AED", "#2563EB", "#0E9F6E", "#C9A227", "#E8590C", "#E03E3E", "#111827"];
+
+/**
+ * Read an image file as a data URL ready to upload: photos are scaled to at most `maxWidth`
+ * and saved as JPEG; small PNGs keep their transparency.
+ */
+export async function prepareImage(file: File, maxWidth = 1600): Promise<string> {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Choose a JPEG, PNG or WebP image.");
+  const original = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Couldn't read the image."));
+    reader.readAsDataURL(file);
+  });
+  const img = await loadImage(original);
+  if (file.type === "image/png" && img.width <= maxWidth && file.size <= 1_500_000) return original;
+  const scale = Math.min(1, maxWidth / img.width);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.86);
+}
+
+export function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Couldn't load the image."));
+    img.src = src;
+  });
+}

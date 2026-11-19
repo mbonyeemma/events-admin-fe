@@ -1,7 +1,14 @@
 import { toast } from "sonner";
 
-/** Empty = same origin (the API serves the panel at /panel; `npm run dev` proxies to it). */
-export const BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+/** Production API on Railway. */
+export const PRODUCTION_API_URL = "https://events-app-be-production.up.railway.app";
+
+/**
+ * VITE_API_URL overrides the production API. Set it empty for "same origin":
+ * the panel served by an API at /panel, or `npm run dev` with the local-API proxy.
+ */
+const configured = import.meta.env.VITE_API_URL as string | undefined;
+export const BASE_URL = (configured ?? PRODUCTION_API_URL).replace(/\/+$/, "");
 /** Router base, e.g. "/panel" */
 export const APP_BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 

@@ -36,28 +36,35 @@ Stack (same as the sendcash admin): Vite, React 18, TypeScript, Tailwind CSS, Ta
   - see each person's assigned events
 - **Your account:** change password.
 
-## Run
+## API
 
-The API must be running (see events-app-be), with an admin account (`ADMIN_PHONE` / `ADMIN_PASSWORD` in its `.env`).
+The panel talks to the production API, **https://events-app-be-production.up.railway.app**, unless `VITE_API_URL` says otherwise. Sign in with an admin account; on Railway the first one comes from the `ADMIN_PHONE` / `ADMIN_PASSWORD` variables.
+
+## Run
 
 ```bash
 npm install
-npm run dev        # http://localhost:5175/panel/  (API calls are proxied to http://localhost:4000)
+npm run dev          # http://localhost:5175, against the production API
+npm run dev:local    # against a local API (proxied to http://localhost:4000, or VITE_DEV_API)
 ```
-
-Point the proxy at another API with `VITE_DEV_API=http://host:4000 npm run dev`.
 
 ## Build and deploy
 
-**Served by the API (one server):**
+**Standalone (default), e.g. on Vercel:**
 
 ```bash
-npm run build      # → dist/
+npm run build        # → dist/, a site at "/" that calls the production API
 ```
 
-The API serves `dist/` at `/panel` when it finds it next to the backend (`../admin/dist`), or wherever `ADMIN_PANEL_DIR` points. The panel then calls the API on the same origin, so no CORS setup is needed.
+`vercel.json` is included. The API allows browser calls from other origins (`CORS_ORIGIN`, default `*`).
 
-**Standalone (e.g. Vercel):** set `VITE_BASE=/` and `VITE_API_URL=https://your-api.example.com` when building (`vercel.json` is included). Add the panel's origin to the API's `CORS_ORIGIN`.
+**Served by an API at `/panel` (one server, same origin):**
+
+```bash
+npm run build:api    # → dist/ with base /panel/ and same-origin API calls
+```
+
+The API serves it when it finds it next to the backend (`../admin/dist`) or in `ADMIN_PANEL_DIR`.
 
 ## Layout
 

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "VITE_API_URL= vite",
     "build": "tsc --noEmit && vite build",
+    "build:api": "tsc --noEmit && VITE_BASE=/panel/ VITE_API_URL= vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },

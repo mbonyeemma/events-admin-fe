@@ -72,7 +72,12 @@ export interface Ticket {
   holderPhone: string | null;
   tier: string;
   typeId: string | null;
+  /** 0 for complimentary tickets */
   price: number | null;
+  /** Given away free (guest, press, sponsor) rather than sold */
+  complimentary: boolean;
+  /** Who a complimentary ticket is for, or why */
+  compNote: string | null;
   status: TicketStatus;
   scannedAt: string | null;
   scannedGate: string | null;
@@ -99,9 +104,11 @@ export interface EventStats {
   checkedIn: number;
   notCheckedIn: number;
   voided: number;
+  /** Non-void complimentary tickets (part of `sold`) */
+  complimentary: number;
   revenue: number;
   currency: string;
-  tiers: Array<{ tier: string; sold: number; checkedIn: number; revenue: number }>;
+  tiers: Array<{ tier: string; sold: number; checkedIn: number; complimentary: number; revenue: number }>;
 }
 
 export interface TicketType {
@@ -117,6 +124,8 @@ export interface TicketType {
   color: string | null;
   isActive: boolean;
   issued: number;
+  /** Non-void complimentary tickets (part of `issued`) */
+  complimentary: number;
   checkedIn: number;
   remaining: number | null;
   revenue: number;
@@ -152,6 +161,9 @@ export interface NewTicket {
   holderPhone?: string;
   ticketCode?: string;
 }
+
+/** Issue a batch free of charge (price 0); `compNote` says who it is for. */
+export type CompOptions = { complimentary: true; compNote?: string };
 
 // --- Auth ---
 export const login = (phone: string, password: string) =>
@@ -197,10 +209,12 @@ export const assignStaff = (eventId: string, staffId: string, gateId: string | n
 export const unassignStaff = (eventId: string, staffId: string) => api.del<Assignment[]>(`/admin/events/${eventId}/staff/${staffId}`);
 
 // --- Tickets ---
-export const listTickets = (eventId: string, params: { status?: string; search?: string; limit: number; offset: number }) =>
-  api.get<{ tickets: Ticket[]; total: number }>(`/admin/events/${eventId}/tickets`, params);
-export const issueTickets = (eventId: string, tickets: NewTicket[]) =>
-  api.post<Ticket[]>(`/admin/events/${eventId}/tickets`, { tickets });
+export const listTickets = (
+  eventId: string,
+  params: { status?: string; search?: string; complimentary?: boolean; limit: number; offset: number }
+) => api.get<{ tickets: Ticket[]; total: number }>(`/admin/events/${eventId}/tickets`, params);
+export const issueTickets = (eventId: string, tickets: NewTicket[], comp?: CompOptions) =>
+  api.post<Ticket[]>(`/admin/events/${eventId}/tickets`, { tickets, ...comp });
 export const updateTicket = (code: string, body: Partial<Omit<NewTicket, "ticketCode">>) =>
   api.put<Ticket>(`/admin/tickets/${encodeURIComponent(code)}`, body);
 export const voidTicket = (code: string) => api.put<Ticket>(`/admin/tickets/${encodeURIComponent(code)}/void`);

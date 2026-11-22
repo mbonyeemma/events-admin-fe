@@ -45,6 +45,7 @@ export default function EventDetail() {
   const s = stats.data;
   const sold = s?.sold ?? e.ticketCount;
   const checkedIn = s?.checkedIn ?? e.admittedCount;
+  const comps = s?.complimentary ?? 0;
 
   return (
     <div>
@@ -90,7 +91,7 @@ export default function EventDetail() {
         )}
       </div>
 
-      <Card className="mb-6 grid grid-cols-2 gap-5 p-5 md:grid-cols-4">
+      <Card className="mb-6 grid grid-cols-2 gap-5 p-5 md:grid-cols-3 2xl:grid-cols-5">
         <div className="col-span-2 md:col-span-1">
           <Stat label="Checked in" value={`${formatNumber(checkedIn)} / ${formatNumber(sold)}`} sub={`${percent(checkedIn, sold)}%`} />
           <ProgressBar value={checkedIn} max={sold} className="mt-2" />
@@ -105,16 +106,18 @@ export default function EventDetail() {
             .filter(Boolean)
             .join(" · ")}
         />
+        <Stat label="Complimentary" value={formatNumber(comps)} sub={`${formatNumber(sold - comps)} paid`} />
         <Stat label="Revenue" value={formatMoney(s?.revenue ?? 0, s?.currency)} sub={`${formatNumber(s?.notCheckedIn ?? sold - checkedIn)} not in yet`} />
         <Stat label="Ticket checkers" value={formatNumber(assignments.data?.length ?? e.checkerCount ?? 0)} sub={`${e.gates.length} gates`} />
-        {s && (s.tiers.length > 1 || s.revenue > 0) && (
-          <div className="col-span-2 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4 md:col-span-4">
+        {s && (s.tiers.length > 1 || s.revenue > 0 || s.complimentary > 0) && (
+          <div className="col-span-2 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4 md:col-span-3 2xl:col-span-5">
             {s.tiers.map((t) => (
               <div key={t.tier} className="min-w-[140px] flex-1">
                 <div className="flex justify-between text-xs">
                   <span className="font-semibold text-foreground">{t.tier}</span>
                   <span className="tabular-nums text-muted-foreground">
                     {formatNumber(t.checkedIn)} / {formatNumber(t.sold)}
+                    {t.complimentary > 0 && ` · ${formatNumber(t.complimentary)} comp`}
                     {t.revenue > 0 && ` · ${formatMoney(t.revenue, s.currency)}`}
                   </span>
                 </div>

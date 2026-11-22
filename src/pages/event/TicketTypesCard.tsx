@@ -216,7 +216,8 @@ export function TicketTypesCard({ event }: { event: EventSummary }) {
               <div className="text-right">
                 <div className="font-bold tabular-nums text-foreground">{t.price === 0 ? "Free" : formatMoney(t.price, t.currency)}</div>
                 <div className="text-xs tabular-nums text-muted-foreground">
-                  {t.capacity !== null ? `${t.issued} / ${t.capacity} issued` : `${t.issued} issued`} · {formatMoney(t.revenue, t.currency)}
+                  {t.capacity !== null ? `${t.issued} / ${t.capacity} issued` : `${t.issued} issued`}
+                  {t.complimentary > 0 && ` · ${t.complimentary} comp`} · {formatMoney(t.revenue, t.currency)}
                 </div>
               </div>
               <div className="flex gap-1">

@@ -14,10 +14,11 @@ Stack (same as the sendcash admin): Vite, React 18, TypeScript, Tailwind CSS, Ta
 - **Events:**
   - list with Upcoming / Past / All and search
   - create an event with a banner, type, venue and address, start and end, total tickets (optionally fixed for good), gates and an optional event code
-- **Event page:** check-in progress overall and per tier, and these tabs:
+- **Event page:** check-in progress overall and per tier, complimentary count, and these tabs:
   - **Tickets:**
-    - search, filter (not in / checked in / void), export to CSV
+    - search, filter (not in / checked in / void; paid / complimentary), export to CSV
     - issue tickets for one holder (with quantity), or many by pasting or uploading CSV
+    - **issue complimentary** (comps): free tickets for guests, press or sponsors, with a "who it's for" note. They count toward ticket limits, show a Comp badge and print COMPLIMENTARY instead of a price
     - each ticket opens with its QR code (download PNG), editable holder details, void, and undo check-in
   - **Ticket checkers:**
     - assign several at once, optionally to a gate
@@ -27,7 +28,7 @@ Stack (same as the sendcash admin): Vite, React 18, TypeScript, Tailwind CSS, Ta
   - **Settings:**
     - edit the event details (banner, type, location, times, total tickets)
     - **ticket types**: e.g. Ordinary, VIP 1, VIP 2, Table, each with price (type 200k), quantity, notes and colour; turn off or delete unused ones
-    - **ticket design**: colour and ticket image, with a live preview per type; "Ticket" in a ticket's panel downloads the designed ticket with its QR code
+    - **ticket design**: colour and ticket image, with a live preview per type (and as a comp); "Ticket" in a ticket's panel downloads the designed ticket with its QR code
     - show, regenerate or set the event code
     - activate or deactivate
     - delete (only while the event has no tickets)

@@ -19,5 +19,11 @@ export function TicketPreview({ art, className }: { art: TicketArt; className?: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return <canvas ref={canvas} className={cn("h-auto w-full max-w-[300px] rounded-2xl", className)} aria-label={`Ticket preview for ${art.eventName}`} />;
+  return (
+    <canvas
+      ref={canvas}
+      className={cn("h-auto w-full max-w-[300px] rounded-2xl", className)}
+      aria-label={`${art.complimentary ? "Complimentary ticket" : "Ticket"} preview for ${art.eventName}`}
+    />
+  );
 }

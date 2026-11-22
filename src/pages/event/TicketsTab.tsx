@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
-import { Download, FileUp, Image as ImageIcon, Plus, Search, Ticket as TicketIcon } from "lucide-react";
+import { Download, FileUp, Gift, Image as ImageIcon, Plus, Search, Ticket as TicketIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   Button,
@@ -24,7 +24,7 @@ import {
   TR,
   useConfirm,
 } from "@/components/ui";
-import { TicketStatusBadge } from "@/components/StatusBadges";
+import { CompBadge, TicketStatusBadge } from "@/components/StatusBadges";
 import { download, formatDateTime, formatMoney, parseCsv, toCsv } from "@/lib/utils";
 import { ticketPng } from "@/lib/ticketArt";
 import {
@@ -35,6 +35,7 @@ import {
   resetTicket,
   updateTicket,
   voidTicket,
+  type CompOptions,
   type EventSummary,
   type NewTicket,
   type Ticket,
@@ -44,7 +45,9 @@ import { refreshEvent } from "./refresh";
 
 const PAGE = 50;
 const DEFAULT_TIER = "General Admission";
+const FREE_COMP = "Free (complimentary)";
 type StatusFilter = "" | "valid" | "used" | "void";
+type KindFilter = "" | "paid" | "comp";
 
 function useDebounced<T>(value: T, ms = 300) {
   const [v, setV] = useState(value);
@@ -112,7 +115,20 @@ function withTypes(parsed: { tickets: NewTicket[]; errors: string[] }, rawTiers:
   return { tickets, errors };
 }
 
-function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummary; types: TicketType[]; open: boolean; onClose: () => void }) {
+function IssueTicketsModal({
+  event,
+  types,
+  open,
+  complimentary,
+  onClose,
+}: {
+  event: EventSummary;
+  types: TicketType[];
+  open: boolean;
+  /** Issue the batch free of charge, with an optional "who it's for" note. */
+  complimentary: boolean;
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
   const [mode, setMode] = useState<"one" | "bulk">("one");
   const active = types.filter((t) => t.isActive);
@@ -120,6 +136,7 @@ function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummar
   const blank = () => ({ holderName: "", tier: DEFAULT_TIER, typeId: firstOpen?.id ?? "", holderEmail: "", holderPhone: "", quantity: "1" });
   const [one, setOne] = useState(blank);
   const [csv, setCsv] = useState("");
+  const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const parsed = useMemo(() => {
     const raw = rowsToTickets(csv);
@@ -135,6 +152,7 @@ function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummar
   const reset = () => {
     setOne(blank());
     setCsv("");
+    setNote("");
   };
 
   const submit = async () => {
@@ -155,14 +173,15 @@ function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummar
       if (parsed.tickets.length === 0) return toast.error("Paste or upload at least one row.");
       tickets = parsed.tickets;
     }
+    const comp: CompOptions | undefined = complimentary ? { complimentary: true, compNote: note.trim() || undefined } : undefined;
     setSaving(true);
     let issued = 0;
     try {
       for (let i = 0; i < tickets.length; i += 500) {
-        const res = await issueTickets(event.id, tickets.slice(i, i + 500));
+        const res = await issueTickets(event.id, tickets.slice(i, i + 500), comp);
         issued += res.data?.length ?? 0;
       }
-      toast.success(`${issued.toLocaleString()} ticket${issued === 1 ? "" : "s"} issued.`);
+      toast.success(`${issued.toLocaleString()} ${complimentary ? "complimentary " : ""}ticket${issued === 1 ? "" : "s"} issued.`);
       reset();
       onClose();
     } catch {
@@ -175,11 +194,36 @@ function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummar
 
   const count = mode === "one" ? Math.max(1, Math.floor(Number(one.quantity)) || 1) : parsed.tickets.length;
 
+  const typeField =
+    active.length > 0 ? (
+      <Field label="Ticket type" hint={selected?.notes ?? undefined}>
+        <Select value={one.typeId} onChange={(e) => setOne({ ...one, typeId: e.target.value })}>
+          {active.map((t) => (
+            <option key={t.id} value={t.id} disabled={t.remaining === 0}>
+              {t.name}
+              {complimentary ? "" : ` — ${t.price === 0 ? "Free" : formatMoney(t.price, t.currency)}`}
+              {t.remaining !== null ? ` · ${t.remaining === 0 ? "sold out" : `${t.remaining} left`}` : ""}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    ) : (
+      <Field label="Tier" hint="Add ticket types with prices in Settings to sell VIP, Table, and so on.">
+        <Input value={one.tier} onChange={(e) => setOne({ ...one, tier: e.target.value })} maxLength={60} />
+      </Field>
+    );
+
+  const noteField = complimentary && (
+    <Field label="Who it's for (optional)">
+      <Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="e.g. Press, sponsor, artist's guest" />
+    </Field>
+  );
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Issue tickets"
+      title={complimentary ? "Issue complimentary tickets" : "Issue tickets"}
       description={event.name}
       size="lg"
       footer={
@@ -188,7 +232,7 @@ function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummar
             Cancel
           </Button>
           <Button onClick={submit} loading={saving} disabled={count === 0}>
-            Issue {count > 0 ? count.toLocaleString() : ""} ticket{count === 1 ? "" : "s"}
+            Issue {count > 0 ? count.toLocaleString() : ""} {complimentary ? "complimentary " : ""}ticket{count === 1 ? "" : "s"}
           </Button>
         </>
       }
@@ -214,22 +258,19 @@ function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummar
               <Input type="number" min={1} max={100} value={one.quantity} onChange={(e) => setOne({ ...one, quantity: e.target.value })} />
             </Field>
           </div>
-          {active.length > 0 ? (
-            <Field label="Ticket type" hint={selected?.notes ?? undefined}>
-              <Select value={one.typeId} onChange={(e) => setOne({ ...one, typeId: e.target.value })}>
-                {active.map((t) => (
-                  <option key={t.id} value={t.id} disabled={t.remaining === 0}>
-                    {t.name} — {t.price === 0 ? "Free" : formatMoney(t.price, t.currency)}
-                    {t.remaining !== null ? ` · ${t.remaining === 0 ? "sold out" : `${t.remaining} left`}` : ""}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+          {complimentary ? (
+            <div className="grid gap-4 sm:grid-cols-[1fr_200px]">
+              {typeField}
+              <Field label="Price">
+                <div className="flex h-10 items-center gap-2 rounded-lg border border-input bg-muted px-3 text-sm font-semibold text-foreground">
+                  <Gift className="h-4 w-4 shrink-0" /> {FREE_COMP}
+                </div>
+              </Field>
+            </div>
           ) : (
-            <Field label="Tier" hint="Add ticket types with prices in Settings to sell VIP, Table, and so on.">
-              <Input value={one.tier} onChange={(e) => setOne({ ...one, tier: e.target.value })} maxLength={60} />
-            </Field>
+            typeField
           )}
+          {noteField}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Email (optional)">
               <Input type="email" value={one.holderEmail} onChange={(e) => setOne({ ...one, holderEmail: e.target.value })} maxLength={150} />
@@ -242,6 +283,7 @@ function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummar
         </div>
       ) : (
         <div className="space-y-3">
+          {noteField}
           <Field
             label="Rows"
             hint={
@@ -286,10 +328,15 @@ function IssueTicketsModal({ event, types, open, onClose }: { event: EventSummar
                         {t.typeId ? (
                           <>
                             {types.find((x) => x.id === t.typeId)?.name}
-                            <span className="ml-1 text-xs text-muted-foreground">{formatMoney(types.find((x) => x.id === t.typeId)?.price, types.find((x) => x.id === t.typeId)?.currency)}</span>
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              {complimentary ? FREE_COMP : formatMoney(types.find((x) => x.id === t.typeId)?.price, types.find((x) => x.id === t.typeId)?.currency)}
+                            </span>
                           </>
                         ) : (
-                          t.tier
+                          <>
+                            {t.tier}
+                            {complimentary && <span className="ml-1 text-xs text-muted-foreground">{FREE_COMP}</span>}
+                          </>
                         )}
                       </TD>
                       <TD className="py-2 text-xs text-muted-foreground">{[t.holderEmail, t.holderPhone].filter(Boolean).join(" · ")}</TD>
@@ -361,6 +408,7 @@ function TicketModal({ ticket, event, types, onClose }: { ticket: Ticket | null;
         <span className="inline-flex items-center gap-2">
           <span className="font-mono">{ticket.ticketId}</span>
           <TicketStatusBadge status={ticket.status} />
+          {ticket.complimentary && <CompBadge note={ticket.compNote} />}
         </span>
       }
       size="lg"
@@ -455,6 +503,7 @@ function TicketModal({ ticket, event, types, onClose }: { ticket: Ticket | null;
                     holderName: ticket.holderName,
                     typeName: ticket.tier,
                     price: ticket.price,
+                    complimentary: ticket.complimentary,
                     currency: type?.currency ?? "UGX",
                     code: ticket.ticketId,
                     color: type?.color ?? event.ticketColor,
@@ -474,6 +523,12 @@ function TicketModal({ ticket, event, types, onClose }: { ticket: Ticket | null;
           </div>
         </div>
         <div className="space-y-3">
+          {ticket.complimentary && (
+            <div className="flex items-start gap-2 rounded-lg bg-accent px-3 py-2 text-sm text-foreground">
+              <Gift className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="min-w-0 break-words">Complimentary{ticket.compNote ? ` · ${ticket.compNote}` : ""}</span>
+            </div>
+          )}
           {ticket.status === "used" && (
             <div className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
               Checked in {formatDateTime(ticket.scannedAt)}
@@ -485,14 +540,19 @@ function TicketModal({ ticket, event, types, onClose }: { ticket: Ticket | null;
             <Input value={form.holderName} onChange={(e) => setForm({ ...form, holderName: e.target.value })} maxLength={150} />
           </Field>
           {types.length > 0 ? (
-            <Field label="Ticket type" hint={ticket.price !== null ? `Paid ${ticket.price === 0 ? "nothing (free)" : formatMoney(ticket.price)}` : undefined}>
+            <Field
+              label="Ticket type"
+              hint={!ticket.complimentary && ticket.price !== null ? `Paid ${ticket.price === 0 ? "nothing (free)" : formatMoney(ticket.price)}` : undefined}
+            >
               <Select value={form.typeId} onChange={(e) => setForm({ ...form, typeId: e.target.value })}>
                 {!ticket.typeId && <option value="">{ticket.tier} (no type)</option>}
                 {types
                   .filter((t) => t.isActive || t.id === ticket.typeId)
                   .map((t) => (
+                    // A comp stays free on any type, so its options show no prices.
                     <option key={t.id} value={t.id}>
-                      {t.name} — {t.price === 0 ? "Free" : formatMoney(t.price, t.currency)}
+                      {t.name}
+                      {ticket.complimentary ? "" : ` — ${t.price === 0 ? "Free" : formatMoney(t.price, t.currency)}`}
                     </option>
                   ))}
               </Select>
@@ -524,18 +584,20 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
     queryFn: () => listTicketTypes(event.id).then((r) => r.data ?? []),
   });
   const [status, setStatus] = useState<StatusFilter>("");
+  const [kind, setKind] = useState<KindFilter>("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [issuing, setIssuing] = useState(false);
+  const [issuing, setIssuing] = useState<"paid" | "comp" | null>(null);
   const [open, setOpen] = useState<Ticket | null>(null);
   const [exporting, setExporting] = useState(false);
   const q = useDebounced(search.trim());
+  const compFilter = kind ? kind === "comp" : undefined;
 
-  useEffect(() => setPage(0), [status, q]);
+  useEffect(() => setPage(0), [status, kind, q]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["tickets", event.id, status, q, page],
-    queryFn: () => listTickets(event.id, { status, search: q, limit: PAGE, offset: page * PAGE }).then((r) => r.data!),
+    queryKey: ["tickets", event.id, status, kind, q, page],
+    queryFn: () => listTickets(event.id, { status, search: q, complimentary: compFilter, limit: PAGE, offset: page * PAGE }).then((r) => r.data!),
     placeholderData: (prev) => prev,
   });
 
@@ -544,13 +606,26 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
     try {
       const all: Ticket[] = [];
       for (let offset = 0; ; offset += 200) {
-        const res = await listTickets(event.id, { status, search: q, limit: 200, offset });
+        const res = await listTickets(event.id, { status, search: q, complimentary: compFilter, limit: 200, offset });
         all.push(...(res.data?.tickets ?? []));
         if (all.length >= (res.data?.total ?? 0) || (res.data?.tickets.length ?? 0) === 0) break;
       }
       const rows = [
-        ["Ticket code", "Holder", "Ticket type", "Price", "Email", "Phone", "Status", "Checked in at", "Gate", "Checked in by"],
-        ...all.map((t) => [t.ticketId, t.holderName, t.tier, t.price, t.holderEmail, t.holderPhone, t.status, t.scannedAt, t.scannedGate, t.scannedByName]),
+        ["Ticket code", "Holder", "Ticket type", "Price", "Complimentary", "Comp note", "Email", "Phone", "Status", "Checked in at", "Gate", "Checked in by"],
+        ...all.map((t) => [
+          t.ticketId,
+          t.holderName,
+          t.tier,
+          t.price,
+          t.complimentary ? "Yes" : "",
+          t.compNote,
+          t.holderEmail,
+          t.holderPhone,
+          t.status,
+          t.scannedAt,
+          t.scannedGate,
+          t.scannedByName,
+        ]),
       ];
       download(`${event.name.replace(/[^\w]+/g, "-").toLowerCase()}-tickets.csv`, toCsv(rows));
     } catch {
@@ -579,11 +654,23 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
             { value: "void", label: "Void" },
           ]}
         />
-        <div className="ml-auto flex gap-2">
+        <Segmented<KindFilter>
+          value={kind}
+          onChange={setKind}
+          options={[
+            { value: "", label: "All" },
+            { value: "paid", label: "Paid" },
+            { value: "comp", label: "Complimentary" },
+          ]}
+        />
+        <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="outline" onClick={exportCsv} loading={exporting} disabled={!data?.total}>
             <Download className="h-4 w-4" /> Export
           </Button>
-          <Button onClick={() => setIssuing(true)}>
+          <Button variant="outline" onClick={() => setIssuing("comp")}>
+            <Gift className="h-4 w-4" /> Issue complimentary
+          </Button>
+          <Button onClick={() => setIssuing("paid")}>
             <Plus className="h-4 w-4" /> Issue tickets
           </Button>
         </div>
@@ -595,10 +682,10 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
         ) : tickets.length === 0 ? (
           <EmptyState
             icon={TicketIcon}
-            title={q || status ? "No tickets match." : "No tickets yet."}
+            title={q || status || kind ? "No tickets match." : "No tickets yet."}
             action={
-              !q && !status ? (
-                <Button size="sm" onClick={() => setIssuing(true)}>
+              !q && !status && !kind ? (
+                <Button size="sm" onClick={() => setIssuing("paid")}>
                   Issue tickets
                 </Button>
               ) : undefined
@@ -628,8 +715,17 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
                       <div className="flex items-center gap-2">
                         {t.typeId && <span className="h-2.5 w-2.5 rounded-full" style={{ background: types.find((x) => x.id === t.typeId)?.color ?? event.ticketColor }} />}
                         {t.tier}
+                        {t.complimentary && <CompBadge note={t.compNote} />}
                       </div>
-                      {t.price !== null && <div className="text-xs text-muted-foreground">{t.price === 0 ? "Free" : formatMoney(t.price)}</div>}
+                      {t.complimentary ? (
+                        t.compNote && (
+                          <div className="max-w-[220px] truncate text-xs text-muted-foreground" title={t.compNote}>
+                            {t.compNote}
+                          </div>
+                        )
+                      ) : (
+                        t.price !== null && <div className="text-xs text-muted-foreground">{t.price === 0 ? "Free" : formatMoney(t.price)}</div>
+                      )}
                     </TD>
                     <TD>
                       <TicketStatusBadge status={t.status} />
@@ -653,7 +749,7 @@ export default function TicketsTab({ event }: { event: EventSummary }) {
         )}
       </Card>
 
-      <IssueTicketsModal event={event} types={types} open={issuing} onClose={() => setIssuing(false)} />
+      <IssueTicketsModal event={event} types={types} open={issuing !== null} complimentary={issuing === "comp"} onClose={() => setIssuing(null)} />
       <TicketModal ticket={open} event={event} types={types} onClose={() => setOpen(null)} />
     </div>
   );

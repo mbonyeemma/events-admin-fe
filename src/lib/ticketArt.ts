@@ -10,6 +10,8 @@ export interface TicketArt {
   holderName: string;
   typeName: string;
   price: number | null;
+  /** Complimentary ticket: "COMPLIMENTARY" is printed where the price goes. */
+  complimentary?: boolean;
   currency: string;
   code: string;
   /** Band colour: the ticket type's colour, else the event's ticket colour. */
@@ -150,7 +152,17 @@ export async function drawTicket(canvas: HTMLCanvasElement, t: TicketArt) {
   ctx.fillStyle = INK;
   ctx.font = `900 56px ${FONT}`;
   ctx.fillText(wrap(ctx, t.typeName, w - 520, 1)[0], x + 110, infoY + 6);
-  if (t.price !== null) {
+  if (t.complimentary) {
+    // Shrink to fit beside the type name (which gets at most w - 520).
+    let size = 44;
+    do {
+      ctx.font = `900 ${size}px ${FONT}`;
+      size -= 2;
+    } while (ctx.measureText("COMPLIMENTARY").width > 330 && size >= 24);
+    ctx.textAlign = "right";
+    ctx.fillText("COMPLIMENTARY", x + w - 60, infoY + 4);
+    ctx.textAlign = "left";
+  } else if (t.price !== null) {
     ctx.font = `700 44px ${FONT}`;
     ctx.textAlign = "right";
     ctx.fillText(t.price === 0 ? "Free" : formatMoney(t.price, t.currency), x + w - 60, infoY + 4);

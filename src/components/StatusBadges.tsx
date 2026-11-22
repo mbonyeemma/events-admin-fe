@@ -1,3 +1,4 @@
+import { Gift } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { eventPhase } from "@/lib/utils";
 import type { ScanOutcome, TicketStatus } from "@/services/admin";
@@ -6,6 +7,16 @@ export function TicketStatusBadge({ status }: { status: TicketStatus }) {
   if (status === "used") return <Badge variant="success">Checked in</Badge>;
   if (status === "void") return <Badge variant="destructive">Void</Badge>;
   return <Badge variant="muted">Not in</Badge>;
+}
+
+/** Complimentary ticket; hover shows who it is for. */
+export function CompBadge({ note }: { note?: string | null }) {
+  return (
+    <Badge title={note ? `Complimentary: ${note}` : "Complimentary"}>
+      <Gift className="h-3 w-3" />
+      Comp
+    </Badge>
+  );
 }
 
 export function OutcomeBadge({ outcome }: { outcome: ScanOutcome }) {

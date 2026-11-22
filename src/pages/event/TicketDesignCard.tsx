@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Gift } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Field } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
@@ -15,6 +16,7 @@ export function TicketDesignCard({ event }: { event: EventSummary }) {
   const [color, setColor] = useState(event.ticketColor);
   const [imageId, setImageId] = useState<string | null>(event.ticketImageId);
   const [previewType, setPreviewType] = useState<string | null>(null);
+  const [previewComp, setPreviewComp] = useState(false);
   const [saving, setSaving] = useState(false);
   const { data: types = [] } = useQuery({
     queryKey: ["ticket-types", event.id],
@@ -79,9 +81,9 @@ export function TicketDesignCard({ event }: { event: EventSummary }) {
           </div>
         </div>
         <div className="space-y-3">
-          {types.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {[null, ...types.map((t) => t.id)].map((id) => {
+          <div className="flex flex-wrap items-center gap-1.5">
+            {types.length > 0 &&
+              [null, ...types.map((t) => t.id)].map((id) => {
                 const label = id ? types.find((t) => t.id === id)!.name : "Event";
                 return (
                   <button
@@ -96,8 +98,18 @@ export function TicketDesignCard({ event }: { event: EventSummary }) {
                   </button>
                 );
               })}
-            </div>
-          )}
+            <button
+              onClick={() => setPreviewComp(!previewComp)}
+              aria-pressed={previewComp}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold",
+                previewComp ? "border-primary bg-primary text-primary-foreground" : "border-input text-foreground hover:bg-accent",
+                types.length > 0 && "ml-auto"
+              )}
+            >
+              <Gift className="h-3 w-3" /> Comp
+            </button>
+          </div>
           <TicketPreview
             art={{
               eventName: event.name,
@@ -108,6 +120,7 @@ export function TicketDesignCard({ event }: { event: EventSummary }) {
               holderName: "Guest name",
               typeName: type?.name ?? types[0]?.name ?? "General Admission",
               price: type ? type.price : types[0]?.price ?? null,
+              complimentary: previewComp,
               currency: type?.currency ?? types[0]?.currency ?? "UGX",
               code: "TKT-SAMPLE-0001",
               color: type?.color ?? color,

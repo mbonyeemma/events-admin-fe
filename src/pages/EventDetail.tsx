@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, DoorOpen, Gift, MapPin, ScanLine, Ticket, Users, Wallet } from "lucide-react";
-import { Badge, Card, CardContent, CardHeader, CardTitle, CopyButton, Loading, PageError, ProgressBar, StatCard, Tabs } from "@/components/ui";
+import { ArrowLeft, CalendarDays, DoorOpen, Gift, MapPin, Pencil, Power, ScanLine, Ticket, Trash2, Users, Wallet } from "lucide-react";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, CopyButton, Loading, PageError, ProgressBar, StatCard, Tabs } from "@/components/ui";
 import { EventStatusBadge } from "@/components/StatusBadges";
 import { compactMoney, formatDate, formatMoney, formatNumber, formatTime, percent } from "@/lib/utils";
-import { getEvent, getEventStats, listAssignments, mediaUrl } from "@/services/admin";
+import { getEvent, getEventStats, listAssignments, mediaUrl, type EventSummary } from "@/services/admin";
+import { useEventActions } from "@/pages/event/actions";
 import TicketsTab from "@/pages/event/TicketsTab";
 import CheckersTab from "@/pages/event/CheckersTab";
 import GatesTab from "@/pages/event/GatesTab";
@@ -13,6 +14,31 @@ import SettingsTab from "@/pages/event/SettingsTab";
 
 type Tab = "tickets" | "checkers" | "gates" | "scans" | "settings";
 const TABS: Tab[] = ["tickets", "checkers", "gates", "scans", "settings"];
+
+/** Edit, deactivate or reactivate, and delete: at the top of the event page. */
+function EventActions({ event, onEdit }: { event: Pick<EventSummary, "id" | "name" | "isActive" | "ticketCount">; onEdit: () => void }) {
+  const { busy, setActive, remove } = useEventActions(event);
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          onEdit();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      >
+        <Pencil className="h-4 w-4" /> Edit
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => setActive(!event.isActive)} loading={busy === "active"}>
+        <Power className="h-4 w-4" /> {event.isActive ? "Deactivate" : "Activate"}
+      </Button>
+      <Button variant="dangerOutline" size="sm" onClick={remove} loading={busy === "delete"}>
+        <Trash2 className="h-4 w-4" /> Delete
+      </Button>
+    </div>
+  );
+}
 
 export default function EventDetail() {
   const { eventId = "" } = useParams();
@@ -39,9 +65,12 @@ export default function EventDetail() {
 
   return (
     <div>
-      <Link to="/events" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Events
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to="/events" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Events
+        </Link>
+        <EventActions event={{ ...e, ticketCount: sold + (s?.voided ?? 0) }} onEdit={() => setTab("settings")} />
+      </div>
 
       <div className="mb-6 mt-4 flex flex-col gap-5 md:flex-row md:items-center">
         <div className="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-accent sm:h-24 sm:w-36">
@@ -141,7 +170,7 @@ export default function EventDetail() {
           { value: "checkers", label: "Ticket checkers", count: assignments.data?.length },
           { value: "gates", label: "Gates", count: e.gates.length },
           { value: "scans", label: "Scan log" },
-          { value: "settings", label: "Settings" },
+          { value: "settings", label: "Edit & settings" },
         ]}
       />
 

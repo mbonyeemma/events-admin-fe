@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import { CalendarDays, KeyRound, Pencil, Power, RefreshCw, Search, UserPlus, Users } from "lucide-react";
+import { CalendarDays, KeyRound, Pencil, Power, RefreshCw, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/Layout";
 import {
@@ -30,7 +30,8 @@ import { RoleBadge } from "@/components/StatusBadges";
 import { OrganisersEmpty } from "@/components/OrganisersEmpty";
 import { useAuth } from "@/contexts/AuthContext";
 import { eventPhase, formatDate, formatDateTime, formatPhone, formatTime, generatePassword } from "@/lib/utils";
-import { createStaff, listStaff, listStaffEvents, unassignStaff, updateStaff, type Role, type Staff } from "@/services/admin";
+import { createStaff, deleteStaff, listStaff, listStaffEvents, unassignStaff, updateStaff, type Role, type Staff } from "@/services/admin";
+import { ApiError } from "@/lib/api";
 
 type RoleFilter = "all" | "ticket_checker" | "admin" | "organiser";
 
@@ -283,6 +284,42 @@ export default function Checkers() {
     }
   };
 
+  const remove = async (s: Staff) => {
+    const ok = await confirm({
+      title: `Delete ${s.name}?`,
+      message: "They're removed from every event they were assigned to and can't sign in. This can't be undone.",
+      confirmLabel: "Delete user",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteStaff(s.staffId);
+      toast.success(`${s.name} deleted.`);
+      qc.invalidateQueries({ queryKey: ["staff"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        // They've scanned tickets: their scans name them, so they stay. Offer to deactivate instead.
+        const keep = await confirm({
+          title: `${s.name} has scanned tickets`,
+          message: "People who've scanned tickets are kept for the record, so they can't be deleted. Deactivate them instead? They're signed out at once.",
+          confirmLabel: "Deactivate",
+          danger: true,
+        });
+        if (keep && s.isActive) {
+          try {
+            await updateStaff(s.staffId, { isActive: false });
+            toast.success(`${s.name} deactivated.`);
+            qc.invalidateQueries({ queryKey: ["staff"] });
+            qc.invalidateQueries({ queryKey: ["overview"] });
+          } catch {
+            /* toast shown */
+          }
+        }
+      } else toast.error(error instanceof Error ? error.message : "Couldn't delete this user.");
+    }
+  };
+
   const toggleActive = async (s: Staff) => {
     if (s.isActive) {
       const ok = await confirm({
@@ -416,6 +453,17 @@ export default function Checkers() {
                           onClick={() => toggleActive(s)}
                         >
                           <Power className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={me ? "You can't delete yourself" : "Delete"}
+                          aria-label={`Delete ${s.name}`}
+                          className="text-destructive"
+                          disabled={me}
+                          onClick={() => remove(s)}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TD>

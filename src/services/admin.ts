@@ -206,6 +206,8 @@ export const updateStaff = (
   staffId: string,
   body: Partial<{ name: string; phone: string; email: string | null; password: string; role: Role; isActive: boolean }>
 ) => api.put<Staff>(`/admin/staff/${staffId}`, body);
+/** Remove a user added by mistake. 409 when they've scanned tickets (deactivate them instead). Quiet: the caller explains. */
+export const deleteStaff = (staffId: string) => api.del(`/admin/staff/${staffId}`, { quiet: true });
 export const listStaffEvents = (staffId: string) => api.get<StaffAssignment[]>(`/admin/staff/${staffId}/events`);
 
 // --- Events ---
@@ -217,7 +219,8 @@ export const updateEvent = (
   eventId: string,
   body: Partial<EventDetailsInput & { isActive: boolean; accessCode: string; ticketColor: string; ticketImageId: string | null }>
 ) => api.put<EventSummary>(`/admin/events/${eventId}`, body);
-export const deleteEvent = (eventId: string) => api.del(`/admin/events/${eventId}`);
+/** 409 when the event has tickets (deactivate it instead). Quiet: the caller explains. */
+export const deleteEvent = (eventId: string) => api.del(`/admin/events/${eventId}`, { quiet: true });
 export const getEventStats = (eventId: string) => api.get<EventStats>(`/admin/events/${eventId}/stats`);
 
 // --- Gates ---

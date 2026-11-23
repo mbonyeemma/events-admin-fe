@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, CopyButton, Input, Switch, useConfirm } from "@/components/ui";
 import { EventForm, eventToForm, formToInput, validateEvent, type EventFormValues } from "@/components/EventForm";
-import { deleteEvent, updateEvent, type EventSummary } from "@/services/admin";
+import { updateEvent, type EventSummary } from "@/services/admin";
+import { useEventActions } from "./actions";
 import { TicketTypesCard } from "./TicketTypesCard";
 import { TicketDesignCard } from "./TicketDesignCard";
 import { refreshEvent } from "./refresh";
 
 export default function SettingsTab({ event, ticketCount }: { event: EventSummary; ticketCount: number }) {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const confirm = useConfirm();
   const [values, setValues] = useState<EventFormValues>(() => eventToForm(event));
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const actions = useEventActions({ ...event, ticketCount });
 
   // Pick up changes saved elsewhere (or by another admin).
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,39 +59,6 @@ export default function SettingsTab({ event, ticketCount }: { event: EventSummar
       confirmLabel: "Change code",
     });
     if (ok && (await run("code", () => updateEvent(event.id, { accessCode: next }), "Event code changed."))) setCode("");
-  };
-
-  const toggleActive = async (active: boolean) => {
-    if (!active) {
-      const ok = await confirm({
-        title: "Deactivate this event?",
-        message: "Ticket checkers stop seeing it in the app and its event code stops working. You can turn it back on any time.",
-        confirmLabel: "Deactivate",
-        danger: true,
-      });
-      if (!ok) return;
-    }
-    run("active", () => updateEvent(event.id, { isActive: active }), active ? "Event is active." : "Event deactivated.");
-  };
-
-  const remove = async () => {
-    const ok = await confirm({
-      title: `Delete ${event.name}?`,
-      message: "Its gates, ticket types and ticket checker assignments are removed too. This can't be undone.",
-      confirmLabel: "Delete event",
-      danger: true,
-    });
-    if (!ok) return;
-    setBusy("delete");
-    try {
-      await deleteEvent(event.id);
-      toast.success("Event deleted.");
-      qc.invalidateQueries({ queryKey: ["events"] });
-      qc.invalidateQueries({ queryKey: ["overview"] });
-      navigate("/events", { replace: true });
-    } catch {
-      setBusy(null);
-    }
   };
 
   return (
@@ -153,7 +120,7 @@ export default function SettingsTab({ event, ticketCount }: { event: EventSummar
             <div className="font-bold text-foreground">Active</div>
             <p className="text-sm text-muted-foreground">Inactive events are hidden from ticket checkers and can't be scanned.</p>
           </div>
-          <Switch checked={event.isActive} onChange={toggleActive} disabled={busy === "active"} label="Event active" />
+          <Switch checked={event.isActive} onChange={(on) => actions.setActive(on)} disabled={actions.busy === "active"} label="Event active" />
         </CardContent>
       </Card>
 
@@ -165,7 +132,7 @@ export default function SettingsTab({ event, ticketCount }: { event: EventSummar
               {ticketCount > 0 ? "Events with tickets are kept for the record. Deactivate it instead." : "Only events without tickets can be deleted."}
             </p>
           </div>
-          <Button variant="dangerOutline" onClick={remove} disabled={ticketCount > 0} loading={busy === "delete"}>
+          <Button variant="dangerOutline" onClick={actions.remove} loading={actions.busy === "delete"}>
             Delete event
           </Button>
         </CardContent>

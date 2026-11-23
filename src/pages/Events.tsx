@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarDays, CalendarPlus, ChevronRight, Search } from "lucide-react";
+import { CalendarDays, CalendarPlus, Pencil, Power, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import {
   Button,
@@ -22,9 +22,37 @@ import {
 import { EventStatusBadge } from "@/components/StatusBadges";
 import { EventThumb } from "@/pages/Dashboard";
 import { eventPhase, formatDate, formatNumber, formatTime, percent } from "@/lib/utils";
-import { listEvents } from "@/services/admin";
+import { listEvents, type EventSummary } from "@/services/admin";
+import { useEventActions } from "@/pages/event/actions";
 
 type Filter = "upcoming" | "past" | "all";
+
+/** Edit, deactivate or reactivate, and delete, from the list. */
+function RowActions({ event }: { event: EventSummary }) {
+  const navigate = useNavigate();
+  const { busy, setActive, remove } = useEventActions(event, { afterDelete: "stay" });
+  return (
+    <div className="flex justify-end gap-1">
+      <Button variant="ghost" size="icon" title="Edit" aria-label={`Edit ${event.name}`} onClick={() => navigate(`/events/${event.id}?tab=settings`)}>
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title={event.isActive ? "Deactivate" : "Activate"}
+        aria-label={`${event.isActive ? "Deactivate" : "Activate"} ${event.name}`}
+        className={event.isActive ? "text-muted-foreground" : "text-success"}
+        loading={busy === "active"}
+        onClick={() => setActive(!event.isActive)}
+      >
+        {busy !== "active" && <Power className="h-4 w-4" />}
+      </Button>
+      <Button variant="ghost" size="icon" title="Delete" aria-label={`Delete ${event.name}`} className="text-destructive" loading={busy === "delete"} onClick={remove}>
+        {busy !== "delete" && <Trash2 className="h-4 w-4" />}
+      </Button>
+    </div>
+  );
+}
 
 export default function Events() {
   const navigate = useNavigate();
@@ -105,9 +133,8 @@ export default function Events() {
                 <TH>Date</TH>
                 <TH>Status</TH>
                 <TH className="w-48">Checked in</TH>
-                <TH className="text-right">Checkers</TH>
-                <TH className="text-right">Gates</TH>
-                <TH />
+                <TH className="hidden text-right 2xl:table-cell">Checkers</TH>
+                <TH className="text-right">Actions</TH>
               </TR>
             </THead>
             <TBody>
@@ -138,10 +165,9 @@ export default function Events() {
                     </div>
                     <ProgressBar value={e.admittedCount} max={e.ticketCount} />
                   </TD>
-                  <TD className="text-right font-semibold tabular-nums text-foreground">{e.checkerCount ?? 0}</TD>
-                  <TD className="text-right tabular-nums">{e.gates.length}</TD>
-                  <TD className="w-8 text-right">
-                    <ChevronRight className="ml-auto h-4 w-4 text-faint" />
+                  <TD className="hidden text-right font-semibold tabular-nums text-foreground 2xl:table-cell">{e.checkerCount ?? 0}</TD>
+                  <TD className="text-right" onClick={(ev) => ev.stopPropagation()}>
+                    <RowActions event={e} />
                   </TD>
                 </TR>
               ))}

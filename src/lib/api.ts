@@ -94,5 +94,5 @@ export const api = {
     request<T>(endpoint, { method: "POST", body: JSON.stringify(body ?? {}), ...opts }),
   put: <T>(endpoint: string, body?: unknown, opts?: { quiet?: boolean }) =>
     request<T>(endpoint, { method: "PUT", body: JSON.stringify(body ?? {}), ...opts }),
-  del: <T>(endpoint: string) => request<T>(endpoint, { method: "DELETE" }),
+  del: <T>(endpoint: string, opts?: { quiet?: boolean }) => request<T>(endpoint, { method: "DELETE", ...opts }),
 };

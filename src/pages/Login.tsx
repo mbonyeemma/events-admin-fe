@@ -33,14 +33,8 @@ export default function Login() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col gap-6 p-4 sm:p-6 lg:h-[100dvh] lg:flex-row lg:gap-10 lg:p-8">
-      {/* A purple ticket with a photo, as on the GatePass site's login */}
+      {/* A plain purple panel with the name and what the panel is for */}
       <div className="relative flex shrink-0 items-center gap-3 overflow-hidden rounded-[28px] bg-sidebar px-6 py-6 text-white lg:w-[46%] lg:flex-col lg:items-start lg:justify-between lg:p-10">
-        <img
-          src="https://images.unsplash.com/photo-1648708511872-5426c0f29c27?auto=format&fit=crop&w=1200&q=70"
-          alt=""
-          className="absolute inset-0 hidden h-full w-full object-cover lg:block"
-        />
-        <div className="absolute inset-0 hidden bg-[linear-gradient(to_bottom,rgba(30,10,60,0.85)_0%,rgba(30,10,60,0.35)_30%,rgba(30,10,60,0.55)_60%,#1E0A3C_100%)] lg:block" />
         <div className="relative flex items-center gap-2.5">
           <BrandMark className="h-10 w-10" />
           <BrandName />

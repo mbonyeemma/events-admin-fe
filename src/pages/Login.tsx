@@ -62,7 +62,7 @@ export default function Login() {
                 className="h-12 pl-10"
                 inputMode="tel"
                 autoComplete="tel"
-                placeholder="0772 123 456"
+                placeholder="078 123 4567"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 autoFocus

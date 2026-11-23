@@ -61,7 +61,8 @@ export default function Events() {
   const [params] = useSearchParams();
   const [filter, setFilter] = useState<Filter>(() => (params.get("filter") === "waiting" ? "waiting" : "upcoming"));
   const [search, setSearch] = useState("");
-  const [country, setCountry] = useState<"all" | "RW" | "UG">("all");
+  // Rwanda is the default everywhere in GatePass.
+  const [country, setCountry] = useState<"all" | "RW" | "UG">("RW");
   const [currency, setCurrency] = useState("all");
   const { data, isLoading, isError } = useQuery({ queryKey: ["events"], queryFn: () => listEvents().then((r) => r.data ?? []) });
   // Old links (/events?new=1) open the New event page.

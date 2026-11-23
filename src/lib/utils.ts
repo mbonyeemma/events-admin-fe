@@ -52,10 +52,10 @@ export function toLocalInput(iso: string | Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** "+256772123456" → "+256 772 123 456" */
+/** "+250788123456" → "+250 788 123 456" (Rwanda and Uganda numbers) */
 export function formatPhone(phone: string | null | undefined): string {
   if (!phone) return "—";
-  const m = phone.match(/^\+(256)(\d{3})(\d{3})(\d{3})$/);
+  const m = phone.match(/^\+(250|256)(\d{3})(\d{3})(\d{3})$/);
   return m ? `+${m[1]} ${m[2]} ${m[3]} ${m[4]}` : phone;
 }
 
@@ -135,14 +135,14 @@ export function download(filename: string, content: string | Blob, type = "text/
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** "UGX 200,000" */
-export function formatMoney(amount: number | null | undefined, currency = "UGX"): string {
+/** "RWF 200,000" (Rwanda is the default) */
+export function formatMoney(amount: number | null | undefined, currency = "RWF"): string {
   if (amount === null || amount === undefined) return "—";
   return `${currency} ${Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
 /** RWF 1.9M, UGX 250K: short enough for a stat card. */
-export function compactMoney(amount: number | null | undefined, currency = "UGX"): string {
+export function compactMoney(amount: number | null | undefined, currency = "RWF"): string {
   if (amount === null || amount === undefined) return "—";
   const trim = (n: number) => (Math.round(n * 10) / 10).toString();
   if (amount >= 1_000_000) return `${currency} ${trim(amount / 1_000_000)}M`;
@@ -152,7 +152,7 @@ export function compactMoney(amount: number | null | undefined, currency = "UGX"
 
 /** "200k" → 200000, "1.5m" → 1500000, "700,000" → 700000. null when it isn't an amount. */
 export function parseAmount(text: string): number | null {
-  const m = text.trim().toLowerCase().replace(/[,\s]/g, "").replace(/^ugx/, "").match(/^(\d+(?:\.\d+)?)([km]?)$/);
+  const m = text.trim().toLowerCase().replace(/[,\s]/g, "").replace(/^(ugx|rwf)/, "").match(/^(\d+(?:\.\d+)?)([km]?)$/);
   if (!m) return null;
   const n = Number(m[1]) * (m[2] === "k" ? 1_000 : m[2] === "m" ? 1_000_000 : 1);
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;

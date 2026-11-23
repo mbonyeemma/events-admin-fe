@@ -130,7 +130,7 @@ function TicketTypeModal({ event, type, onClose }: { event: EventSummary; type: 
           )}
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={`Price (${type?.currency ?? "UGX"})`} hint={amount !== null && price ? formatMoney(amount, type?.currency) : "e.g. 200000, 200k or 1.5m; 0 = free"}>
+          <Field label={`Price (${type?.currency ?? "RWF"})`} hint={amount !== null && price ? formatMoney(amount, type?.currency) : "e.g. 200000, 200k or 1.5m; 0 = free"}>
             <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="200k" inputMode="decimal" />
           </Field>
           <Field label="Quantity (optional)" hint={type && type.issued > 0 ? `${type.issued} already issued` : "Leave empty for no limit"}>

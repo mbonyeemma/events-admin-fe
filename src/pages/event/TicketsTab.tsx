@@ -61,7 +61,7 @@ function useDebounced<T>(value: T, ms = 300) {
 /* --------------------------- Issue tickets --------------------------- */
 
 const CSV_EXAMPLE = `name, tier, email, phone, code
-Amina Okello, VIP, amina@example.com, 0772 123456
+Aline Uwase, VIP, aline@example.com, 078 123 4567
 James Mutebi, General Admission`;
 
 /** Rows from CSV: header row optional (name, tier, email, phone, code in any order). */
@@ -504,7 +504,7 @@ function TicketModal({ ticket, event, types, onClose }: { ticket: Ticket | null;
                     typeName: ticket.tier,
                     price: ticket.price,
                     complimentary: ticket.complimentary,
-                    currency: type?.currency ?? "UGX",
+                    currency: type?.currency ?? "RWF",
                     code: ticket.ticketId,
                     color: type?.color ?? event.ticketColor,
                     imageUrl: mediaUrl(event.ticketImageId ?? event.bannerId),

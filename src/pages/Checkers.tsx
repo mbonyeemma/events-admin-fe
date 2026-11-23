@@ -141,7 +141,7 @@ function StaffFormModal({
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Phone number" hint="They sign in with this.">
-            <Input inputMode="tel" placeholder="0772 123 456" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <Input inputMode="tel" placeholder="078 123 4567" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </Field>
           <Field label="Email (optional)">
             <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} maxLength={150} />

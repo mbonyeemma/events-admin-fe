@@ -121,7 +121,7 @@ export function TicketDesignCard({ event }: { event: EventSummary }) {
               typeName: type?.name ?? types[0]?.name ?? "General Admission",
               price: type ? type.price : types[0]?.price ?? null,
               complimentary: previewComp,
-              currency: type?.currency ?? types[0]?.currency ?? "UGX",
+              currency: type?.currency ?? types[0]?.currency ?? "RWF",
               code: "TKT-SAMPLE-0001",
               color: type?.color ?? color,
               imageUrl: mediaUrl(imageId ?? event.bannerId),

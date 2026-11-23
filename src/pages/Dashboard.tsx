@@ -62,12 +62,29 @@ export default function Dashboard() {
     .filter((e) => e.isActive && eventPhase(e.startsAt) !== "past")
     .slice(0, 6);
   const o = overview.data;
+  const waiting = (events.data ?? []).filter((e) => e.approval === "pending").length;
   const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 
   return (
     <div>
       {/* "New event" lives in the sidebar, so the page doesn't repeat it. */}
       <PageHeader kicker={today} title="Dashboard" />
+      {waiting > 0 && (
+        <Link
+          to="/events?filter=waiting"
+          className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-sun/70 bg-sun/15 px-5 py-3.5 text-sm hover:bg-sun/25"
+        >
+          <span>
+            <b className="font-semibold text-foreground">
+              {waiting} {waiting === 1 ? "event is" : "events are"} waiting for your approval.
+            </b>{" "}
+            Organisers posted them on the GatePass site.
+          </span>
+          <span className="flex shrink-0 items-center gap-1 font-semibold text-foreground">
+            Review <ChevronRight className="h-4 w-4" />
+          </span>
+        </Link>
+      )}
 
       {overview.isError ? (
         <PageError />

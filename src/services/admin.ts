@@ -49,6 +49,10 @@ export interface EventSummary {
   organizerName: string | null;
   isFeatured: boolean;
   isListed: boolean;
+  /** Organisers' events wait for an admin before they go on the site. */
+  approval: "approved" | "pending" | "rejected";
+  /** Organiser who posted it on the GatePass site, if any. */
+  owner: { accountId: string; name: string; organization: string | null; phone: string } | null;
   accessCode?: string | null;
   checkerCount?: number;
 }
@@ -230,6 +234,9 @@ export const listEvents = () => api.get<EventSummary[]>("/admin/events");
 export const getEvent = (eventId: string) => api.get<EventSummary>(`/admin/events/${eventId}`);
 export const createEvent = (body: EventDetailsInput & { gates: string[]; accessCode?: string }) =>
   api.post<EventSummary>("/admin/events", body);
+/** Approve or reject an event an organiser posted. */
+export const setApproval = (eventId: string, approval: "approved" | "rejected") => api.put<EventSummary>(`/admin/events/${eventId}`, { approval });
+
 export const updateEvent = (
   eventId: string,
   body: Partial<EventDetailsInput & { isActive: boolean; accessCode: string; ticketColor: string; ticketImageId: string | null }>

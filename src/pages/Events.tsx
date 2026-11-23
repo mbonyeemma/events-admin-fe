@@ -26,7 +26,7 @@ import { eventPhase, formatDate, formatNumber, formatTime, percent } from "@/lib
 import { listEvents, type EventSummary } from "@/services/admin";
 import { useEventActions } from "@/pages/event/actions";
 
-type Filter = "upcoming" | "past" | "all";
+type Filter = "upcoming" | "past" | "all" | "waiting";
 
 /** Edit, deactivate or reactivate, and delete, from the list. */
 function RowActions({ event }: { event: EventSummary }) {
@@ -58,7 +58,7 @@ function RowActions({ event }: { event: EventSummary }) {
 export default function Events() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [filter, setFilter] = useState<Filter>("upcoming");
+  const [filter, setFilter] = useState<Filter>(() => (params.get("filter") === "waiting" ? "waiting" : "upcoming"));
   const [search, setSearch] = useState("");
   const { data, isLoading, isError } = useQuery({ queryKey: ["events"], queryFn: () => listEvents().then((r) => r.data ?? []) });
   // Old links (/events?new=1) open the New event page.
@@ -67,10 +67,13 @@ export default function Events() {
   }, [params, navigate]);
 
 
+  const waiting = (data ?? []).filter((e) => e.approval === "pending").length;
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = (data ?? []).filter((e) => {
       const past = eventPhase(e.startsAt) === "past";
+      if (filter === "waiting") return e.approval === "pending" && (!q || e.name.toLowerCase().includes(q) || e.venue.toLowerCase().includes(q));
       if (filter === "upcoming" && past) return false;
       if (filter === "past" && !past) return false;
       return !q || e.name.toLowerCase().includes(q) || e.venue.toLowerCase().includes(q);
@@ -99,6 +102,7 @@ export default function Events() {
             { value: "upcoming", label: "Upcoming" },
             { value: "past", label: "Past" },
             { value: "all", label: "All" },
+            ...(waiting ? [{ value: "waiting" as const, label: `Waiting for approval ${waiting}` }] : []),
           ]}
         />
         <div className="relative w-full sm:w-72">
@@ -147,7 +151,13 @@ export default function Events() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="max-w-[260px] truncate font-semibold text-foreground">{e.name}</span>
-                          {!e.isListed && <Badge variant="warning">Not on site</Badge>}
+                          {e.approval === "pending" ? (
+                            <Badge variant="warning">Waiting for approval</Badge>
+                          ) : e.approval === "rejected" ? (
+                            <Badge variant="destructive">Rejected</Badge>
+                          ) : (
+                            !e.isListed && <Badge variant="warning">Not on site</Badge>
+                          )}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">{e.venue}</div>
                       </div>

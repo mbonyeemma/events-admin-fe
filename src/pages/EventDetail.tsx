@@ -6,6 +6,7 @@ import { EventStatusBadge } from "@/components/StatusBadges";
 import { compactMoney, formatDate, formatMoney, formatNumber, formatTime, percent } from "@/lib/utils";
 import { getEvent, getEventStats, listAssignments, mediaUrl, type EventSummary } from "@/services/admin";
 import { useEventActions } from "@/pages/event/actions";
+import { ApprovalPanel } from "@/components/ApprovalPanel";
 import TicketsTab from "@/pages/event/TicketsTab";
 import CheckersTab from "@/pages/event/CheckersTab";
 import GatesTab from "@/pages/event/GatesTab";
@@ -86,6 +87,8 @@ export default function EventDetail() {
           <div className="flex flex-wrap items-center gap-2">
             <EventStatusBadge startsAt={e.startsAt} isActive={e.isActive} />
             {e.eventType && <Badge variant="muted">{e.eventType}</Badge>}
+            {e.approval === "pending" && <Badge variant="warning">Waiting for approval</Badge>}
+            {e.approval === "rejected" && <Badge variant="destructive">Rejected</Badge>}
             {!e.isListed && <Badge variant="warning">Not on the GatePass site</Badge>}
             {e.isListed && e.isFeatured && <Badge variant="solid">Featured on the site</Badge>}
           </div>
@@ -116,6 +119,8 @@ export default function EventDetail() {
           </div>
         )}
       </div>
+
+      <ApprovalPanel event={e} />
 
       <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
         <StatCard tone="brand" label="Checked in" icon={ScanLine} value={formatNumber(checkedIn)} hint={`${percent(checkedIn, sold)}% of ${formatNumber(sold)} tickets`}>

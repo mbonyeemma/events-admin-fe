@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -9,8 +9,11 @@ import { APP_BASE } from "@/lib/api";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Events from "@/pages/Events";
+import NewEvent from "@/pages/NewEvent";
 import EventDetail from "@/pages/EventDetail";
 import Checkers from "@/pages/Checkers";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 15_000 } },
@@ -19,9 +22,17 @@ const queryClient = new QueryClient({
 const routes: Array<[string, JSX.Element]> = [
   ["/", <Dashboard />],
   ["/events", <Events />],
+  ["/events/new", <NewEvent />],
   ["/events/:eventId", <EventDetail />],
-  ["/checkers", <Checkers />],
+  ["/users", <Checkers />],
+  ["/reports", <Reports />],
+  ["/settings", <Settings />],
 ];
+
+function CheckersRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/users${search}`} replace />;
+}
 
 export default function App() {
   return (
@@ -43,6 +54,8 @@ export default function App() {
                   }
                 />
               ))}
+              {/* "Ticket checkers" is now "Users" */}
+              <Route path="/checkers" element={<CheckersRedirect />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

@@ -1,16 +1,15 @@
 import { useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { CalendarDays, CalendarPlus, KeyRound, LayoutDashboard, LogOut, Menu, Users, X } from "lucide-react";
-import { toast } from "sonner";
+import { BarChart3, CalendarDays, CalendarPlus, LayoutDashboard, LogOut, Menu, Settings, Users, X } from "lucide-react";
 import { cn, formatPhone, initials } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { changeOwnPassword } from "@/services/admin";
-import { Button, Field, Input, Modal } from "@/components/ui";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/events", label: "Events", icon: CalendarDays },
-  { to: "/checkers", label: "Ticket checkers", icon: Users },
+  { to: "/users", label: "Users", icon: Users },
+  { to: "/reports", label: "Reports", icon: BarChart3 },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 /** The GatePass ticket-stub mark: white on purple surfaces (`light`), purple elsewhere. Same as the site. */
@@ -36,59 +35,10 @@ export function BrandName({ className }: { className?: string }) {
   );
 }
 
-function ChangePasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [saving, setSaving] = useState(false);
-  const submit = async () => {
-    if (next.length < 8) return toast.error("New password must be at least 8 characters.");
-    setSaving(true);
-    try {
-      await changeOwnPassword(current, next);
-      toast.success("Password changed.");
-      setCurrent("");
-      setNext("");
-      onClose();
-    } catch {
-      /* toast shown */
-    } finally {
-      setSaving(false);
-    }
-  };
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Change your password"
-      size="sm"
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={submit} loading={saving} disabled={!current || !next}>
-            Change password
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-3">
-        <Field label="Current password">
-          <Input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} autoFocus />
-        </Field>
-        <Field label="New password" hint="At least 8 characters.">
-          <Input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
-        </Field>
-      </div>
-    </Modal>
-  );
-}
-
 export function Layout({ children }: { children: ReactNode }) {
   const { admin, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const sidebar = (
     <div className="flex h-full flex-col overflow-y-auto bg-sidebar text-sidebar-foreground">
@@ -100,7 +50,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <button
           onClick={() => {
             setOpen(false);
-            navigate("/events?new=1");
+            navigate("/events/new");
           }}
           className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-sun text-[15px] font-semibold text-ink transition-colors hover:bg-sun-hover"
         >
@@ -127,13 +77,6 @@ export function Layout({ children }: { children: ReactNode }) {
         ))}
       </nav>
       <div className="space-y-1 border-t border-white/10 p-3">
-        <button
-          onClick={() => setPasswordOpen(true)}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/70 hover:bg-white/10 hover:text-white"
-        >
-          <KeyRound className="h-4 w-4" />
-          Change password
-        </button>
         <button
           onClick={() => {
             logout();
@@ -173,7 +116,9 @@ export function Layout({ children }: { children: ReactNode }) {
             <span className="block text-sm font-semibold text-foreground">{admin?.name}</span>
             <span className="block text-xs text-muted-foreground">{formatPhone(admin?.phone)}</span>
           </span>
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white">{initials(admin?.name ?? "")}</span>
+          <NavLink to="/settings" aria-label="Settings" className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white hover:bg-brand-hover">
+            {initials(admin?.name ?? "")}
+          </NavLink>
         </div>
       </header>
 
@@ -181,7 +126,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="mx-auto max-w-[1360px]">{children}</div>
       </main>
 
-      <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
     </div>
   );
 }

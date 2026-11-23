@@ -89,7 +89,7 @@ async function request<T>(endpoint: string, options: Options = {}): Promise<ApiR
 }
 
 export const api = {
-  get: <T>(endpoint: string, params?: Query) => request<T>(`${endpoint}${buildQuery(params)}`, { method: "GET" }),
+  get: <T>(endpoint: string, params?: Query, opts?: { quiet?: boolean }) => request<T>(`${endpoint}${buildQuery(params)}`, { method: "GET", ...opts }),
   post: <T>(endpoint: string, body?: unknown, opts?: { quiet?: boolean; auth?: boolean }) =>
     request<T>(endpoint, { method: "POST", body: JSON.stringify(body ?? {}), ...opts }),
   put: <T>(endpoint: string, body?: unknown, opts?: { quiet?: boolean }) =>

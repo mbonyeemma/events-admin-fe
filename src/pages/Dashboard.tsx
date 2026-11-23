@@ -116,7 +116,7 @@ export default function Dashboard() {
               icon={CalendarDays}
               title="No upcoming events"
               action={
-                <Button size="sm" onClick={() => navigate("/events?new=1")}>
+                <Button size="sm" onClick={() => navigate("/events/new")}>
                   Create an event
                 </Button>
               }

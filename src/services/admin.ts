@@ -145,6 +145,26 @@ export interface EventDetailsInput {
   ticketLimitLocked: boolean;
 }
 
+export type OrderStatus = "pending" | "paid" | "free" | "failed" | "expired" | "refund_due";
+
+/** A purchase on the GatePass site (Mobile Money through MVend, or free tickets). */
+export interface Order {
+  code: string;
+  eventId: string;
+  eventName: string;
+  status: OrderStatus;
+  amount: number;
+  currency: string;
+  buyer: { name: string; phone: string; email: string | null };
+  lines: Array<{ typeId: string; typeName: string; price: number; quantity: number }>;
+  holdUntil: string;
+  paidAt: string | null;
+  createdAt: string;
+  failureReason: string | null;
+  tickets: Array<{ ticketId: string; tier: string; holderName: string; price: number | null; status: TicketStatus }>;
+  payment?: { provider: string; txref: string | null; wallet: string | null; providerStatus: string | null; providerRef: string | null };
+}
+
 export interface Overview {
   events: { total: number; upcoming: number };
   tickets: { issued: number; checkedIn: number };
@@ -173,6 +193,10 @@ export const changeOwnPassword = (currentPassword: string, newPassword: string) 
 
 // --- Dashboard ---
 export const getOverview = () => api.get<Overview>("/admin/overview");
+
+/** Transactions. Quiet: the server answers 404 until online payments are switched on. */
+export const listOrders = (params: { status?: OrderStatus; eventId?: string; limit?: number; offset?: number }) =>
+  api.get<{ orders: Order[]; total: number }>("/admin/orders", params, { quiet: true });
 
 // --- Staff ---
 export const listStaff = () => api.get<Staff[]>("/admin/staff");

@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarDays, CalendarPlus, ChevronRight, Search } from "lucide-react";
-import { toast } from "sonner";
 import { PageHeader } from "@/components/Layout";
 import {
   Button,
@@ -10,7 +9,6 @@ import {
   EmptyState,
   Input,
   Loading,
-  Modal,
   PageError,
   ProgressBar,
   Segmented,
@@ -22,73 +20,23 @@ import {
   TR,
 } from "@/components/ui";
 import { EventStatusBadge } from "@/components/StatusBadges";
-import { EventForm, emptyEvent, formToInput, validateEvent, type EventFormValues } from "@/components/EventForm";
 import { EventThumb } from "@/pages/Dashboard";
 import { eventPhase, formatDate, formatNumber, formatTime, percent } from "@/lib/utils";
-import { createEvent, listEvents } from "@/services/admin";
+import { listEvents } from "@/services/admin";
 
 type Filter = "upcoming" | "past" | "all";
 
-export function NewEventModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-  const [values, setValues] = useState<EventFormValues>(emptyEvent);
-  const [saving, setSaving] = useState(false);
-
-  const submit = async () => {
-    const error = validateEvent(values, true);
-    if (error) return toast.error(error);
-    setSaving(true);
-    try {
-      const res = await createEvent({
-        ...formToInput(values),
-        gates: values.gates,
-        ...(values.accessCode ? { accessCode: values.accessCode } : {}),
-      });
-      toast.success("Event created.");
-      qc.invalidateQueries({ queryKey: ["events"] });
-      qc.invalidateQueries({ queryKey: ["overview"] });
-      setValues(emptyEvent());
-      onClose();
-      navigate(`/events/${res.data!.id}`);
-    } catch {
-      /* toast shown */
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="New event"
-      size="lg"
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={submit} loading={saving}>
-            Create event
-          </Button>
-        </>
-      }
-    >
-      <EventForm values={values} onChange={setValues} creating />
-    </Modal>
-  );
-}
-
 export default function Events() {
   const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const [filter, setFilter] = useState<Filter>("upcoming");
   const [search, setSearch] = useState("");
   const { data, isLoading, isError } = useQuery({ queryKey: ["events"], queryFn: () => listEvents().then((r) => r.data ?? []) });
+  // Old links (/events?new=1) open the New event page.
+  useEffect(() => {
+    if (params.get("new") === "1") navigate("/events/new", { replace: true });
+  }, [params, navigate]);
 
-  const creating = params.get("new") === "1";
-  const setCreating = (v: boolean) => setParams(v ? { new: "1" } : {}, { replace: true });
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -108,7 +56,7 @@ export default function Events() {
         kicker="All events"
         title="Events"
         action={
-          <Button className="rounded-full px-5" onClick={() => setCreating(true)}>
+          <Button className="rounded-full px-5" onClick={() => navigate("/events/new")}>
             <CalendarPlus className="h-4 w-4" /> New event
           </Button>
         }
@@ -143,7 +91,7 @@ export default function Events() {
             title={search ? "No events match." : filter === "past" ? "No past events." : "No upcoming events."}
             action={
               !search && filter !== "past" ? (
-                <Button size="sm" onClick={() => setCreating(true)}>
+                <Button size="sm" onClick={() => navigate("/events/new")}>
                   Create an event
                 </Button>
               ) : undefined
@@ -202,7 +150,6 @@ export default function Events() {
         )}
       </Card>
 
-      <NewEventModal open={creating} onClose={() => setCreating(false)} />
     </div>
   );
 }

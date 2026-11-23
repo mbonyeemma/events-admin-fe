@@ -27,11 +27,12 @@ import {
   useConfirm,
 } from "@/components/ui";
 import { RoleBadge } from "@/components/StatusBadges";
+import { OrganisersEmpty } from "@/components/OrganisersEmpty";
 import { useAuth } from "@/contexts/AuthContext";
 import { eventPhase, formatDate, formatDateTime, formatPhone, formatTime, generatePassword } from "@/lib/utils";
 import { createStaff, listStaff, listStaffEvents, unassignStaff, updateStaff, type Role, type Staff } from "@/services/admin";
 
-type RoleFilter = "all" | "ticket_checker" | "admin";
+type RoleFilter = "all" | "ticket_checker" | "admin" | "organiser";
 
 /** Shown once after creating an account or resetting a password. */
 function CredentialsModal({ creds, onClose }: { creds: { name: string; phone: string; password: string } | null; onClose: () => void }) {
@@ -121,7 +122,7 @@ function StaffFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? `Edit ${staff!.name}` : "New ticket checker"}
+      title={editing ? `Edit ${staff!.name}` : "New user"}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -306,11 +307,11 @@ export default function Checkers() {
     <div>
       <PageHeader
         kicker="Your team"
-        title="Ticket checkers"
-        description="People who scan tickets at the gate, and the admins who run this panel."
+        title="Users"
+        description="Admins run this panel, ticket checkers scan tickets at the gate, and organisers post events."
         action={
           <Button className="rounded-full px-5" onClick={() => setCreating(true)}>
-            <UserPlus className="h-4 w-4" /> New checker
+            <UserPlus className="h-4 w-4" /> Add user
           </Button>
         }
       />
@@ -321,8 +322,9 @@ export default function Checkers() {
           onChange={setRole}
           options={[
             { value: "all", label: `All ${data ? data.length : ""}`.trim() },
-            { value: "ticket_checker", label: `Ticket checkers ${data ? counts.checkers : ""}`.trim() },
             { value: "admin", label: `Admins ${data ? counts.admins : ""}`.trim() },
+            { value: "ticket_checker", label: `Ticket checkers ${data ? counts.checkers : ""}`.trim() },
+            { value: "organiser", label: "Organisers" },
           ]}
         />
         <div className="relative w-full sm:w-72">
@@ -338,14 +340,16 @@ export default function Checkers() {
           <div className="p-4">
             <PageError />
           </div>
+        ) : role === "organiser" ? (
+          <OrganisersEmpty />
         ) : rows.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={search ? "No one matches." : "No ticket checkers yet."}
+            title={search ? "No one matches." : "No users yet."}
             action={
               !search ? (
                 <Button size="sm" onClick={() => setCreating(true)}>
-                  Add a ticket checker
+                  Add a user
                 </Button>
               ) : undefined
             }

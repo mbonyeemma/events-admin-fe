@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Lock, Plus, X } from "lucide-react";
-import { Button, Field, Input, Select } from "@/components/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Select } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
 import { EVENT_TYPES, toLocalInput } from "@/lib/utils";
 import type { EventDetailsInput, EventSummary } from "@/services/admin";
@@ -81,14 +81,20 @@ export function validateEvent(v: EventFormValues, creating: boolean): string | n
 }
 
 /** Banner, name, type, location, date and time, ticket limit; on create also gates and an optional event code. */
+/**
+ * The event's details. `layout="stack"` (default) is one column, for the event's Settings tab.
+ * `layout="page"` lays the same fields out as cards in two columns, for the New event page.
+ */
 export function EventForm({
   values,
   onChange,
   creating,
+  layout = "stack",
 }: {
   values: EventFormValues;
   onChange: (v: EventFormValues) => void;
   creating?: boolean;
+  layout?: "stack" | "page";
 }) {
   const [gate, setGate] = useState("");
   const set = (patch: Partial<EventFormValues>) => onChange({ ...values, ...patch });
@@ -100,17 +106,19 @@ export function EventForm({
     setGate("");
   };
 
-  return (
-    <div className="space-y-4">
-      <Field label="Banner">
-        <ImagePicker
-          imageId={values.bannerId}
-          onChange={(bannerId) => set({ bannerId })}
-          emptyLabel="Add a banner"
-          hint="A wide image works best, e.g. 1600 × 800. It also goes on tickets unless you pick a ticket image."
-        />
-      </Field>
+  const banner = (
+    <Field label="Banner">
+      <ImagePicker
+        imageId={values.bannerId}
+        onChange={(bannerId) => set({ bannerId })}
+        emptyLabel="Add a banner"
+        hint="A wide image works best, e.g. 1600 × 800. It also goes on tickets unless you pick a ticket image."
+      />
+    </Field>
+  );
 
+  const details = (
+    <>
       <Field label="Event name">
         <Input value={values.name} onChange={(e) => set({ name: e.target.value })} placeholder="Jazz on the Hill" maxLength={150} autoFocus={creating} />
       </Field>
@@ -158,86 +166,139 @@ export function EventForm({
           <Input type="datetime-local" value={values.endsAt} min={values.startsAt} onChange={(e) => set({ endsAt: e.target.value })} />
         </Field>
       </div>
+    </>
+  );
 
-      <Field
-        label="Total tickets"
-        hint={
-          values.limitFixed
-            ? "Fixed: this number can't be changed."
-            : "The most tickets that can be issued for this event, across all ticket types. Leave empty for no limit."
-        }
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-40">
-            <Input
-              type="number"
-              min={1}
-              value={values.ticketLimit}
-              onChange={(e) => set({ ticketLimit: e.target.value })}
-              placeholder="No limit"
-              disabled={values.limitFixed}
+  const ticketLimit = (
+    <Field
+      label="Total tickets"
+      hint={
+        values.limitFixed
+          ? "Fixed: this number can't be changed."
+          : "The most tickets that can be issued for this event, across all ticket types. Leave empty for no limit."
+      }
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-40">
+          <Input
+            type="number"
+            min={1}
+            value={values.ticketLimit}
+            onChange={(e) => set({ ticketLimit: e.target.value })}
+            placeholder="No limit"
+            disabled={values.limitFixed}
+          />
+          {values.limitFixed && <Lock className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />}
+        </div>
+        {!values.limitFixed && (
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-body">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[#1E0A3C]"
+              checked={values.ticketLimitLocked}
+              onChange={(e) => set({ ticketLimitLocked: e.target.checked })}
             />
-            {values.limitFixed && <Lock className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />}
-          </div>
-          {!values.limitFixed && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-body">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-[#1E0A3C]"
-                checked={values.ticketLimitLocked}
-                onChange={(e) => set({ ticketLimitLocked: e.target.checked })}
-              />
-              Fixed — can't be changed later
-            </label>
+            Fixed — can't be changed later
+          </label>
+        )}
+      </div>
+    </Field>
+  );
+
+  const gates = (
+    <Field label="Gates" hint="Where tickets are checked. Ticket checkers can be posted to one gate.">
+      <div className="flex flex-wrap gap-2">
+        {values.gates.map((g) => (
+          <span key={g} className="inline-flex items-center gap-1 rounded-full bg-accent py-1 pl-3 pr-1 text-sm font-semibold text-foreground">
+            {g}
+            <button
+              type="button"
+              aria-label={`Remove ${g}`}
+              onClick={() => set({ gates: values.gates.filter((x) => x !== g) })}
+              className="rounded-full p-0.5 text-muted-foreground hover:bg-card hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={gate}
+          onChange={(e) => setGate(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addGate();
+            }
+          }}
+          placeholder="Add a gate, e.g. VIP Entrance"
+          maxLength={60}
+        />
+        <Button variant="outline" className="h-11" onClick={addGate} disabled={!gate.trim()}>
+          <Plus className="h-4 w-4" /> Add
+        </Button>
+      </div>
+    </Field>
+  );
+
+  const accessCode = (
+    <Field label="Event code (optional)" hint="Lets door devices open just this event without an account. Leave empty to generate one.">
+      <Input
+        value={values.accessCode}
+        onChange={(e) => set({ accessCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") })}
+        placeholder="e.g. JAZZ26"
+        maxLength={20}
+        className="font-mono tracking-widest"
+      />
+    </Field>
+  );
+
+  if (layout === "page")
+    return (
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-6">
+        <div className="space-y-4 lg:space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">{details}</CardContent>
+          </Card>
+          {creating && (
+            <Card>
+              <CardHeader>
+                <CardTitle>At the gate</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {gates}
+                {accessCode}
+              </CardContent>
+            </Card>
           )}
         </div>
-      </Field>
+        <div className="space-y-4 lg:space-y-6">
+          <Card>
+            <CardContent className="pt-5 sm:pt-6">{banner}</CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Tickets</CardTitle>
+            </CardHeader>
+            <CardContent>{ticketLimit}</CardContent>
+          </Card>
+        </div>
+      </div>
+    );
 
+  return (
+    <div className="space-y-4">
+      {banner}
+      {details}
+      {ticketLimit}
       {creating && (
         <>
-          <Field label="Gates" hint="Where tickets are checked. Ticket checkers can be posted to one gate.">
-            <div className="flex flex-wrap gap-2">
-              {values.gates.map((g) => (
-                <span key={g} className="inline-flex items-center gap-1 rounded-lg bg-accent py-1 pl-3 pr-1 text-sm font-semibold text-foreground">
-                  {g}
-                  <button
-                    type="button"
-                    aria-label={`Remove ${g}`}
-                    onClick={() => set({ gates: values.gates.filter((x) => x !== g) })}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-card hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                value={gate}
-                onChange={(e) => setGate(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addGate();
-                  }
-                }}
-                placeholder="Add a gate, e.g. VIP Entrance"
-                maxLength={60}
-              />
-              <Button variant="outline" onClick={addGate} disabled={!gate.trim()}>
-                <Plus className="h-4 w-4" /> Add
-              </Button>
-            </div>
-          </Field>
-          <Field label="Event code (optional)" hint="Lets door devices open just this event without an account. Leave empty to generate one.">
-            <Input
-              value={values.accessCode}
-              onChange={(e) => set({ accessCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") })}
-              placeholder="e.g. JAZZ26"
-              maxLength={20}
-              className="font-mono tracking-widest"
-            />
-          </Field>
+          {gates}
+          {accessCode}
         </>
       )}
     </div>

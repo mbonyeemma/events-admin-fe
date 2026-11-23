@@ -53,6 +53,12 @@ export interface EventSummary {
   approval: "approved" | "pending" | "rejected";
   /** Organiser who posted it on the GatePass site, if any. */
   owner: { accountId: string; name: string; organization: string | null; phone: string } | null;
+  /** Tickets sold (not voided, not complimentary) and their value, in the tickets' currency. */
+  soldCount: number;
+  revenue: number;
+  currency: string;
+  /** The country it shows under on the GatePass site. */
+  siteCountry: "RW" | "UG";
   accessCode?: string | null;
   checkerCount?: number;
 }

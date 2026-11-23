@@ -13,6 +13,7 @@ import {
   PageError,
   ProgressBar,
   Segmented,
+  Select,
   Table,
   TBody,
   TD,
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui";
 import { EventStatusBadge } from "@/components/StatusBadges";
 import { EventThumb } from "@/pages/Dashboard";
-import { eventPhase, formatDate, formatNumber, formatTime, percent } from "@/lib/utils";
+import { eventPhase, formatDate, formatMoney, formatNumber, formatTime, percent } from "@/lib/utils";
 import { listEvents, type EventSummary } from "@/services/admin";
 import { useEventActions } from "@/pages/event/actions";
 
@@ -60,6 +61,8 @@ export default function Events() {
   const [params] = useSearchParams();
   const [filter, setFilter] = useState<Filter>(() => (params.get("filter") === "waiting" ? "waiting" : "upcoming"));
   const [search, setSearch] = useState("");
+  const [country, setCountry] = useState<"all" | "RW" | "UG">("all");
+  const [currency, setCurrency] = useState("all");
   const { data, isLoading, isError } = useQuery({ queryKey: ["events"], queryFn: () => listEvents().then((r) => r.data ?? []) });
   // Old links (/events?new=1) open the New event page.
   useEffect(() => {
@@ -69,9 +72,13 @@ export default function Events() {
 
   const waiting = (data ?? []).filter((e) => e.approval === "pending").length;
 
+  const currencies = useMemo(() => [...new Set((data ?? []).map((e) => e.currency))].sort(), [data]);
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = (data ?? []).filter((e) => {
+      if (country !== "all" && e.siteCountry !== country) return false;
+      if (currency !== "all" && e.currency !== currency) return false;
       const past = eventPhase(e.startsAt) === "past";
       if (filter === "waiting") return e.approval === "pending" && (!q || e.name.toLowerCase().includes(q) || e.venue.toLowerCase().includes(q));
       if (filter === "upcoming" && past) return false;
@@ -80,7 +87,14 @@ export default function Events() {
     });
     // Upcoming: soonest first. Past: most recent first.
     return filter === "past" ? list.reverse() : list;
-  }, [data, filter, search]);
+  }, [data, filter, search, country, currency]);
+
+  // Totals for what's shown: tickets sold, and their value per currency.
+  const totals = useMemo(() => {
+    const byCurrency = new Map<string, number>();
+    for (const e of rows) byCurrency.set(e.currency, (byCurrency.get(e.currency) ?? 0) + e.revenue);
+    return { sold: rows.reduce((n, e) => n + e.soldCount, 0), value: [...byCurrency.entries()].filter(([, v]) => v > 0) };
+  }, [rows]);
 
   return (
     <div>
@@ -93,6 +107,34 @@ export default function Events() {
           </Button>
         }
       />
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Select value={country} onChange={(e) => setCountry(e.target.value as "all" | "RW" | "UG")} className="w-auto min-w-[160px]" aria-label="Country">
+          <option value="all">All countries</option>
+          <option value="RW">Rwanda</option>
+          <option value="UG">Uganda</option>
+        </Select>
+        <Select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-auto min-w-[160px]" aria-label="Currency">
+          <option value="all">All currencies</option>
+          {currencies.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </Select>
+        {!isLoading && (
+          <p className="text-sm text-muted-foreground">
+            <b className="font-semibold text-foreground">{formatNumber(rows.length)}</b> {rows.length === 1 ? "event" : "events"} ·{" "}
+            <b className="font-semibold text-foreground">{formatNumber(totals.sold)}</b> tickets sold
+            {totals.value.map(([c, v]) => (
+              <span key={c}>
+                {" "}
+                · <b className="font-semibold text-foreground">{formatMoney(v, c)}</b>
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segmented<Filter>
@@ -137,7 +179,9 @@ export default function Events() {
                 <TH>Event</TH>
                 <TH>Date</TH>
                 <TH>Status</TH>
-                <TH className="w-48">Checked in</TH>
+                <TH className="text-right">Sold</TH>
+                <TH className="text-right">Value</TH>
+                <TH className="w-40">Checked in</TH>
                 <TH className="hidden text-right 2xl:table-cell">Checkers</TH>
                 <TH className="text-right">Actions</TH>
               </TR>
@@ -169,6 +213,10 @@ export default function Events() {
                   </TD>
                   <TD>
                     <EventStatusBadge startsAt={e.startsAt} isActive={e.isActive} />
+                  </TD>
+                  <TD className="text-right font-semibold tabular-nums text-foreground">{formatNumber(e.soldCount)}</TD>
+                  <TD className="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
+                    {e.revenue > 0 ? formatMoney(e.revenue, e.currency) : <span className="font-normal text-muted-foreground">—</span>}
                   </TD>
                   <TD>
                     <div className="mb-1.5 flex justify-between text-xs">

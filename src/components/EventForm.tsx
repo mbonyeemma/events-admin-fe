@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Lock, Plus, X } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Select } from "@/components/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Select, Switch, Textarea } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
 import { EVENT_TYPES, toLocalInput } from "@/lib/utils";
 import type { EventDetailsInput, EventSummary } from "@/services/admin";
@@ -19,7 +19,30 @@ export interface EventFormValues {
   limitFixed?: boolean;
   gates: string[];
   accessCode: string;
+  // On the GatePass booking site
+  description: string;
+  city: string;
+  country: string; // "RW" | "UG"
+  category: string;
+  organizerName: string;
+  isFeatured: boolean;
+  isListed: boolean;
 }
+
+/** The booking site's kinds of event (same list as the site). */
+export const SITE_CATEGORIES = [
+  ["music", "Music"],
+  ["nightlife", "Nightlife"],
+  ["comedy", "Comedy"],
+  ["festival", "Festivals"],
+  ["sports", "Sports"],
+  ["arts", "Arts & film"],
+  ["food", "Food & drink"],
+  ["conference", "Conferences"],
+  ["faith", "Faith"],
+  ["outdoors", "Outdoors"],
+  ["family", "Family"],
+] as const;
 
 export const emptyEvent = (): EventFormValues => {
   const d = new Date();
@@ -37,6 +60,13 @@ export const emptyEvent = (): EventFormValues => {
     ticketLimitLocked: false,
     gates: ["Main Gate"],
     accessCode: "",
+    description: "",
+    city: "Kigali",
+    country: "RW",
+    category: "",
+    organizerName: "",
+    isFeatured: false,
+    isListed: true,
   };
 };
 
@@ -53,6 +83,13 @@ export const eventToForm = (e: EventSummary): EventFormValues => ({
   limitFixed: e.ticketLimitLocked,
   gates: [],
   accessCode: "",
+  description: e.description ?? "",
+  city: e.city ?? "",
+  country: e.country ?? "",
+  category: e.category ?? "",
+  organizerName: e.organizerName ?? "",
+  isFeatured: e.isFeatured,
+  isListed: e.isListed,
 });
 
 /** Values for the API (create and update share these fields). */
@@ -66,6 +103,13 @@ export const formToInput = (v: EventFormValues): EventDetailsInput => ({
   bannerId: v.bannerId,
   ticketLimit: v.ticketLimit ? Number(v.ticketLimit) : null,
   ticketLimitLocked: v.ticketLimitLocked,
+  description: v.description.trim() || null,
+  city: v.city.trim() || null,
+  country: v.country || null,
+  category: v.category || null,
+  organizerName: v.organizerName.trim() || null,
+  isFeatured: v.isFeatured,
+  isListed: v.isListed,
 });
 
 export function validateEvent(v: EventFormValues, creating: boolean): string | null {
@@ -242,6 +286,52 @@ export function EventForm({
     </Field>
   );
 
+  const site = (
+    <>
+      <div className="flex items-center justify-between gap-4 rounded-xl bg-muted px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Show on the GatePass site</p>
+          <p className="text-xs text-muted-foreground">Buyers see it once it has ticket types on sale.</p>
+        </div>
+        <Switch checked={values.isListed} onChange={(isListed) => set({ isListed })} label="Show on the GatePass site" />
+      </div>
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-body">
+        <input type="checkbox" className="h-4 w-4 accent-[#1E0A3C]" checked={values.isFeatured} onChange={(e) => set({ isFeatured: e.target.checked })} />
+        Feature it on the home page
+      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Kind of event">
+          <Select value={values.category} onChange={(e) => set({ category: e.target.value })}>
+            <option value="">From the event type</option>
+            {SITE_CATEGORIES.map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Organiser name" hint="Shown to buyers.">
+          <Input value={values.organizerName} onChange={(e) => set({ organizerName: e.target.value })} placeholder="GatePass" maxLength={150} />
+        </Field>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Country">
+          <Select value={values.country} onChange={(e) => set({ country: e.target.value })}>
+            <option value="">From the ticket currency</option>
+            <option value="RW">Rwanda</option>
+            <option value="UG">Uganda</option>
+          </Select>
+        </Field>
+        <Field label="City">
+          <Input value={values.city} onChange={(e) => set({ city: e.target.value })} placeholder="Kigali" maxLength={80} />
+        </Field>
+      </div>
+      <Field label="Description" hint="What buyers should know. Leave a blank line between paragraphs.">
+        <Textarea value={values.description} onChange={(e) => set({ description: e.target.value })} maxLength={4000} placeholder="Line-up, dress code, what's included…" />
+      </Field>
+    </>
+  );
+
   const accessCode = (
     <Field label="Event code (optional)" hint="Lets door devices open just this event without an account. Leave empty to generate one.">
       <Input
@@ -263,6 +353,12 @@ export function EventForm({
               <CardTitle>Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">{details}</CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>On the GatePass site</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">{site}</CardContent>
           </Card>
           {creating && (
             <Card>
@@ -295,6 +391,10 @@ export function EventForm({
       {banner}
       {details}
       {ticketLimit}
+      <div className="space-y-4 border-t pt-5">
+        <p className="font-semibold text-foreground">On the GatePass site</p>
+        {site}
+      </div>
       {creating && (
         <>
           {gates}

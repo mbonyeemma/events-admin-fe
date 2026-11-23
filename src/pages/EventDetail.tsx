@@ -86,6 +86,8 @@ export default function EventDetail() {
           <div className="flex flex-wrap items-center gap-2">
             <EventStatusBadge startsAt={e.startsAt} isActive={e.isActive} />
             {e.eventType && <Badge variant="muted">{e.eventType}</Badge>}
+            {!e.isListed && <Badge variant="warning">Not on the GatePass site</Badge>}
+            {e.isListed && e.isFeatured && <Badge variant="solid">Featured on the site</Badge>}
           </div>
           <h1 className="headline mt-2 text-[28px] leading-[1.05] sm:text-[36px]">{e.name}</h1>
           <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">

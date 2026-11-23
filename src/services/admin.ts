@@ -41,6 +41,14 @@ export interface EventSummary {
   ticketCount: number;
   admittedCount: number;
   isActive: boolean;
+  /** Shown on the GatePass booking site. */
+  description: string | null;
+  city: string | null;
+  country: string | null;
+  category: string | null;
+  organizerName: string | null;
+  isFeatured: boolean;
+  isListed: boolean;
   accessCode?: string | null;
   checkerCount?: number;
 }
@@ -143,6 +151,13 @@ export interface EventDetailsInput {
   bannerId: string | null;
   ticketLimit: number | null;
   ticketLimitLocked: boolean;
+  description: string | null;
+  city: string | null;
+  country: string | null;
+  category: string | null;
+  organizerName: string | null;
+  isFeatured: boolean;
+  isListed: boolean;
 }
 
 export type OrderStatus = "pending" | "paid" | "free" | "failed" | "expired" | "refund_due";

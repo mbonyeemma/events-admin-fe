@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarDays, CalendarPlus, Pencil, Power, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -144,7 +145,10 @@ export default function Events() {
                     <div className="flex items-center gap-3">
                       <EventThumb event={e} />
                       <div className="min-w-0">
-                        <div className="max-w-[280px] truncate font-semibold text-foreground">{e.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="max-w-[260px] truncate font-semibold text-foreground">{e.name}</span>
+                          {!e.isListed && <Badge variant="warning">Not on site</Badge>}
+                        </div>
                         <div className="truncate text-xs text-muted-foreground">{e.venue}</div>
                       </div>
                     </div>

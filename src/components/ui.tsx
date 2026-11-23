@@ -3,21 +3,22 @@ import { Check, Copy, Loader2, X } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
 
 /* ----------------------------- Button ----------------------------- */
-type ButtonVariant = "default" | "outline" | "ghost" | "destructive" | "secondary" | "dangerOutline";
+type ButtonVariant = "default" | "outline" | "ghost" | "destructive" | "secondary" | "dangerOutline" | "sun";
 type ButtonSize = "default" | "sm" | "lg" | "icon";
 
 const variantClasses: Record<ButtonVariant, string> = {
   default: "bg-primary text-primary-foreground hover:bg-primary-hover",
-  outline: "border border-input bg-card text-foreground hover:bg-accent",
+  outline: "border border-border bg-card text-foreground hover:bg-muted",
   ghost: "text-foreground hover:bg-accent",
   destructive: "bg-destructive text-destructive-foreground hover:opacity-90",
   dangerOutline: "border border-destructive/40 bg-card text-destructive hover:bg-destructive/5",
-  secondary: "bg-secondary text-secondary-foreground hover:bg-accent",
+  secondary: "bg-accent text-foreground hover:bg-[#E6E3EE]",
+  sun: "bg-sun text-ink hover:bg-sun-hover",
 };
 const sizeClasses: Record<ButtonSize, string> = {
   default: "h-10 px-4 text-sm",
-  sm: "h-8 px-3 text-xs",
-  lg: "h-11 px-5 text-[15px]",
+  sm: "h-8 px-3 text-[13px]",
+  lg: "h-12 px-6 text-[15px]",
   icon: "h-9 w-9",
 };
 
@@ -33,7 +34,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       type={type}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50",
         variantClasses[variant],
         sizeClasses[size],
         className
@@ -49,27 +50,27 @@ Button.displayName = "Button";
 
 /* ----------------------------- Card ----------------------------- */
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-xl border bg-card text-card-foreground shadow-[0_1px_2px_rgba(30,10,60,0.04)]", className)} {...props} />;
+  return <div className={cn("rounded-2xl bg-card text-card-foreground", className)} {...props} />;
 }
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex items-center justify-between gap-3 px-5 pb-3 pt-5", className)} {...props} />;
+  return <div className={cn("flex items-center justify-between gap-3 px-5 pb-3 pt-5 sm:px-6 sm:pt-6", className)} {...props} />;
 }
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn("text-base font-bold leading-none text-foreground", className)} {...props} />;
+  return <h3 className={cn("text-lg font-bold leading-none text-foreground", className)} {...props} />;
 }
 export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   return <p className={cn("text-sm text-muted-foreground", className)} {...props} />;
 }
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("px-5 pb-5", className)} {...props} />;
+  return <div className={cn("px-5 pb-5 sm:px-6 sm:pb-6", className)} {...props} />;
 }
 
 /* ----------------------------- Form controls ----------------------------- */
 const control =
-  "flex w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-60";
+  "flex w-full rounded-xl border border-input bg-card px-3.5 text-[15px] text-foreground transition-colors placeholder:text-faint focus-visible:border-ink focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...props }, ref) => <input ref={ref} className={cn(control, "h-10", className)} {...props} />
+  ({ className, ...props }, ref) => <input ref={ref} className={cn(control, "h-11", className)} {...props} />
 );
 Input.displayName = "Input";
 
@@ -80,7 +81,7 @@ Textarea.displayName = "Textarea";
 
 export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   ({ className, children, ...props }, ref) => (
-    <select ref={ref} className={cn(control, "h-10 pr-8", className)} {...props}>
+    <select ref={ref} className={cn(control, "h-11 pr-8", className)} {...props}>
       {children}
     </select>
   )
@@ -88,7 +89,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
 Select.displayName = "Select";
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn("text-[13px] font-medium text-muted-foreground", className)} {...props} />;
+  return <label className={cn("text-sm font-medium text-foreground", className)} {...props} />;
 }
 
 export function Field({ label, hint, children, className }: { label: string; hint?: React.ReactNode; children: React.ReactNode; className?: string }) {
@@ -148,19 +149,19 @@ export function Table({ className, ...props }: React.HTMLAttributes<HTMLTableEle
   );
 }
 export function THead({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("border-b bg-muted/60", className)} {...props} />;
+  return <thead className={cn("border-b", className)} {...props} />;
 }
 export function TBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return <tbody className={className} {...props} />;
 }
 export function TR({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("border-b transition-colors last:border-0 hover:bg-muted/40", className)} {...props} />;
+  return <tr className={cn("border-b transition-colors last:border-0 hover:bg-muted/70", className)} {...props} />;
 }
 export function TH({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th className={cn("h-10 whitespace-nowrap px-4 text-left align-middle text-xs font-semibold text-muted-foreground", className)} {...props} />;
+  return <th className={cn("h-11 whitespace-nowrap px-4 text-left align-middle text-xs font-semibold uppercase tracking-wider text-muted-foreground first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6", className)} {...props} />;
 }
 export function TD({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("px-4 py-3 align-middle", className)} {...props} />;
+  return <td className={cn("px-4 py-3.5 align-middle first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6", className)} {...props} />;
 }
 
 /* ----------------------------- Feedback ----------------------------- */
@@ -179,12 +180,8 @@ export function Loading() {
 export function EmptyState({ icon: Icon, title, action }: { icon?: React.ElementType; title: string; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
-      {Icon && (
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent">
-          <Icon className="h-6 w-6 text-foreground" />
-        </div>
-      )}
-      <p className="text-sm font-medium text-muted-foreground">{title}</p>
+      {Icon && <Icon className="h-8 w-8 text-faint" strokeWidth={1.5} />}
+      <p className="font-semibold text-foreground">{title}</p>
       {action}
     </div>
   );
@@ -192,22 +189,39 @@ export function EmptyState({ icon: Icon, title, action }: { icon?: React.Element
 
 export function PageError({ message }: { message?: string }) {
   return (
-    <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+    <div className="rounded-2xl bg-destructive/5 p-4 text-sm font-medium text-destructive">
       {message || "Something went wrong loading this data."}
     </div>
   );
 }
 
-export function StatCard({ label, value, hint, icon: Icon }: { label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: React.ElementType }) {
+/** A number with its label. `tone="brand"` (purple) marks the one that matters most on the page. */
+export function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone = "white",
+  children,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
+  icon?: React.ElementType;
+  tone?: "white" | "brand";
+  children?: React.ReactNode;
+}) {
+  const brand = tone === "brand";
   return (
-    <Card className="p-5">
+    <div className={cn("rounded-2xl p-5", brand ? "bg-brand text-white" : "bg-card")}>
       <div className="flex items-start justify-between gap-3">
-        <div className="text-[13px] font-medium text-muted-foreground">{label}</div>
-        {Icon && <Icon className="h-5 w-5 text-muted-foreground" strokeWidth={1.8} />}
+        <div className={cn("text-sm", brand ? "text-white/70" : "text-muted-foreground")}>{label}</div>
+        {Icon && <Icon className={cn("h-5 w-5", brand ? "text-sun" : "text-faint")} strokeWidth={1.8} />}
       </div>
-      <div className="mt-2 text-3xl font-black tabular-nums tracking-tight text-foreground">{value}</div>
-      {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
-    </Card>
+      <div className={cn("mt-3 font-display text-[30px] font-extrabold leading-none tabular-nums tracking-tight", brand ? "text-white" : "text-foreground")}>{value}</div>
+      {hint && <div className={cn("mt-2 text-xs", brand ? "text-white/60" : "text-muted-foreground")}>{hint}</div>}
+      {children}
+    </div>
   );
 }
 
@@ -222,7 +236,7 @@ export function ProgressBar({ value, max, className }: { value: number; max: num
 
 export function Avatar({ name, className }: { name: string; className?: string }) {
   return (
-    <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-foreground", className)}>
+    <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand", className)}>
       {initials(name)}
     </div>
   );
@@ -304,13 +318,13 @@ export function Tabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(t.value)}
             className={cn(
-              "-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors",
-              active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+              "-mb-px flex h-11 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-[15px] font-semibold transition-colors",
+              active ? "border-brand text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             {t.label}
             {t.count !== undefined && (
-              <span className={cn("rounded-full px-2 py-0.5 text-[11px]", active ? "bg-primary text-primary-foreground" : "bg-accent")}>{t.count}</span>
+              <span className={cn("rounded-full px-2 py-0.5 text-xs", active ? "bg-brand text-white" : "bg-accent text-muted-foreground")}>{t.count.toLocaleString()}</span>
             )}
           </button>
         );
@@ -322,13 +336,13 @@ export function Tabs<T extends string>({
 /** Pill filter (All / Valid / Used …). */
 export function Segmented<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: string }> }) {
   return (
-    <div className="inline-flex rounded-lg bg-accent p-1">
+    <div className="inline-flex rounded-full bg-accent p-1">
       {options.map((o) => (
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+            "h-8 rounded-full px-3.5 text-sm font-medium transition-colors",
             o.value === value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
           )}
         >
@@ -368,16 +382,16 @@ export function Modal({
   const width = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl" }[size];
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <div className="absolute inset-0 bg-primary/40 backdrop-blur-[1px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/50" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={cn("relative z-10 flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-card shadow-xl sm:rounded-2xl", width)}
+        className={cn("relative z-10 flex max-h-[92vh] w-full flex-col rounded-t-[24px] bg-card shadow-pop sm:rounded-[24px]", width)}
       >
         <div className="flex items-start justify-between gap-4 px-6 pb-2 pt-5">
           <div>
-            <h2 className="text-lg font-black tracking-tight">{title}</h2>
+            <h2 className="font-display text-xl font-extrabold tracking-tight">{title}</h2>
             {description && <div className="mt-1 text-sm text-muted-foreground">{description}</div>}
           </div>
           <button onClick={onClose} aria-label="Close" className="-mr-2 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">

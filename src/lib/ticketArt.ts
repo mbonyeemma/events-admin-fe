@@ -130,7 +130,7 @@ export async function drawTicket(canvas: HTMLCanvasElement, t: TicketArt) {
   ctx.fillStyle = ink;
   ctx.globalAlpha = 0.75;
   ctx.font = `700 28px ${FONT}`;
-  ctx.fillText("LYXA EVENTS", x + 60, bandY + 70);
+  ctx.fillText("GATEPASS", x + 60, bandY + 70);
   ctx.globalAlpha = 1;
   ctx.font = `900 76px ${FONT}`;
   const title = wrap(ctx, t.eventName, w - 120, 2);

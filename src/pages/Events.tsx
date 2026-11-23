@@ -23,7 +23,7 @@ import {
 } from "@/components/ui";
 import { EventStatusBadge } from "@/components/StatusBadges";
 import { EventForm, emptyEvent, formToInput, validateEvent, type EventFormValues } from "@/components/EventForm";
-import { DateTile } from "@/pages/Dashboard";
+import { EventThumb } from "@/pages/Dashboard";
 import { eventPhase, formatDate, formatNumber, formatTime, percent } from "@/lib/utils";
 import { createEvent, listEvents } from "@/services/admin";
 
@@ -105,15 +105,16 @@ export default function Events() {
   return (
     <div>
       <PageHeader
+        kicker="All events"
         title="Events"
         action={
-          <Button onClick={() => setCreating(true)}>
+          <Button className="rounded-full px-5" onClick={() => setCreating(true)}>
             <CalendarPlus className="h-4 w-4" /> New event
           </Button>
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segmented<Filter>
           value={filter}
           onChange={setFilter}
@@ -166,9 +167,9 @@ export default function Events() {
                 <TR key={e.id} className="cursor-pointer" onClick={() => navigate(`/events/${e.id}`)}>
                   <TD>
                     <div className="flex items-center gap-3">
-                      <DateTile iso={e.startsAt} />
+                      <EventThumb event={e} />
                       <div className="min-w-0">
-                        <div className="truncate font-bold text-foreground">{e.name}</div>
+                        <div className="max-w-[280px] truncate font-semibold text-foreground">{e.name}</div>
                         <div className="truncate text-xs text-muted-foreground">{e.venue}</div>
                       </div>
                     </div>
@@ -181,7 +182,7 @@ export default function Events() {
                     <EventStatusBadge startsAt={e.startsAt} isActive={e.isActive} />
                   </TD>
                   <TD>
-                    <div className="mb-1 flex justify-between text-xs">
+                    <div className="mb-1.5 flex justify-between text-xs">
                       <span className="font-semibold text-foreground">
                         {formatNumber(e.admittedCount)} / {formatNumber(e.ticketCount)}
                       </span>
@@ -192,7 +193,7 @@ export default function Events() {
                   <TD className="text-right font-semibold tabular-nums text-foreground">{e.checkerCount ?? 0}</TD>
                   <TD className="text-right tabular-nums">{e.gates.length}</TD>
                   <TD className="w-8 text-right">
-                    <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="ml-auto h-4 w-4 text-faint" />
                   </TD>
                 </TR>
               ))}

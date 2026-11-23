@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, DoorOpen, MapPin } from "lucide-react";
-import { Badge, Card, CopyButton, Loading, PageError, ProgressBar, Tabs } from "@/components/ui";
+import { ArrowLeft, CalendarDays, DoorOpen, Gift, MapPin, ScanLine, Ticket, Users, Wallet } from "lucide-react";
+import { Badge, Card, CardContent, CardHeader, CardTitle, CopyButton, Loading, PageError, ProgressBar, StatCard, Tabs } from "@/components/ui";
 import { EventStatusBadge } from "@/components/StatusBadges";
-import { formatDate, formatMoney, formatNumber, formatTime, percent } from "@/lib/utils";
+import { compactMoney, formatDate, formatMoney, formatNumber, formatTime, percent } from "@/lib/utils";
 import { getEvent, getEventStats, listAssignments, mediaUrl } from "@/services/admin";
 import TicketsTab from "@/pages/event/TicketsTab";
 import CheckersTab from "@/pages/event/CheckersTab";
@@ -13,16 +13,6 @@ import SettingsTab from "@/pages/event/SettingsTab";
 
 type Tab = "tickets" | "checkers" | "gates" | "scans" | "settings";
 const TABS: Tab[] = ["tickets", "checkers", "gates", "scans", "settings"];
-
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-[13px] font-medium text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-2xl font-black tabular-nums tracking-tight text-foreground">{value}</div>
-      {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
-    </div>
-  );
-}
 
 export default function EventDetail() {
   const { eventId = "" } = useParams();
@@ -49,40 +39,45 @@ export default function EventDetail() {
 
   return (
     <div>
-      <Link to="/events" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground">
+      <Link to="/events" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Events
       </Link>
 
-      {e.bannerId && (
-        <img src={mediaUrl(e.bannerId)!} alt="" className="mb-5 aspect-[3/1] w-full rounded-2xl object-cover sm:aspect-[4/1]" />
-      )}
-
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+      <div className="mb-6 mt-4 flex flex-col gap-5 md:flex-row md:items-center">
+        <div className="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-accent sm:h-24 sm:w-36">
+          {e.bannerId ? (
+            <img src={mediaUrl(e.bannerId)!} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <CalendarDays className="h-7 w-7 text-faint" strokeWidth={1.5} />
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             <EventStatusBadge startsAt={e.startsAt} isActive={e.isActive} />
             {e.eventType && <Badge variant="muted">{e.eventType}</Badge>}
           </div>
-          <h1 className="headline text-[30px] leading-tight">{e.name}</h1>
-          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[15px] text-body">
+          <h1 className="headline mt-2 text-[28px] leading-[1.05] sm:text-[36px]">{e.name}</h1>
+          <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <CalendarDays className="h-4 w-4" />
               {formatDate(e.startsAt)} · {formatTime(e.startsAt)}
               {e.endsAt && ` – ${new Date(e.endsAt).toDateString() === new Date(e.startsAt).toDateString() ? formatTime(e.endsAt) : `${formatDate(e.endsAt)} ${formatTime(e.endsAt)}`}`}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <MapPin className="h-4 w-4" />
               {[e.venue, e.address].filter(Boolean).join(", ")}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <DoorOpen className="h-4 w-4 text-muted-foreground" />
+              <DoorOpen className="h-4 w-4" />
               {e.gates.map((g) => g.label).join(", ")}
             </span>
           </div>
         </div>
         {e.accessCode && (
-          <div className="rounded-xl border bg-card px-4 py-2.5">
-            <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Event code</div>
+          <div className="self-start rounded-2xl bg-card px-4 py-3 md:self-center">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Event code</div>
             <div className="flex items-center gap-1">
               <span className="font-mono text-lg font-bold tracking-[0.2em] text-foreground">{e.accessCode}</span>
               <CopyButton value={e.accessCode} label="Copy event code" />
@@ -91,42 +86,51 @@ export default function EventDetail() {
         )}
       </div>
 
-      <Card className="mb-6 grid grid-cols-2 gap-5 p-5 md:grid-cols-3 2xl:grid-cols-5">
-        <div className="col-span-2 md:col-span-1">
-          <Stat label="Checked in" value={`${formatNumber(checkedIn)} / ${formatNumber(sold)}`} sub={`${percent(checkedIn, sold)}%`} />
-          <ProgressBar value={checkedIn} max={sold} className="mt-2" />
-        </div>
-        <Stat
+      <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+        <StatCard tone="brand" label="Checked in" icon={ScanLine} value={formatNumber(checkedIn)} hint={`${percent(checkedIn, sold)}% of ${formatNumber(sold)} tickets`}>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20">
+            <div className="h-full rounded-full bg-sun" style={{ width: `${Math.min(100, percent(checkedIn, sold))}%` }} />
+          </div>
+        </StatCard>
+        <StatCard
           label="Tickets issued"
-          value={e.ticketLimit !== null ? `${formatNumber(sold)} / ${formatNumber(e.ticketLimit)}` : formatNumber(sold)}
-          sub={[
-            e.ticketLimit !== null ? (e.ticketLimitLocked ? "Fixed total" : `${formatNumber(Math.max(e.ticketLimit - sold, 0))} left`) : "No limit",
+          icon={Ticket}
+          value={formatNumber(sold)}
+          hint={[
+            e.ticketLimit !== null ? (e.ticketLimitLocked ? `of ${formatNumber(e.ticketLimit)}, fixed` : `of ${formatNumber(e.ticketLimit)} · ${formatNumber(Math.max(e.ticketLimit - sold, 0))} left`) : "No limit",
             s?.voided ? `${formatNumber(s.voided)} voided` : null,
           ]
             .filter(Boolean)
             .join(" · ")}
         />
-        <Stat label="Complimentary" value={formatNumber(comps)} sub={`${formatNumber(sold - comps)} paid`} />
-        <Stat label="Revenue" value={formatMoney(s?.revenue ?? 0, s?.currency)} sub={`${formatNumber(s?.notCheckedIn ?? sold - checkedIn)} not in yet`} />
-        <Stat label="Ticket checkers" value={formatNumber(assignments.data?.length ?? e.checkerCount ?? 0)} sub={`${e.gates.length} gates`} />
-        {s && (s.tiers.length > 1 || s.revenue > 0 || s.complimentary > 0) && (
-          <div className="col-span-2 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4 md:col-span-3 2xl:col-span-5">
+        <StatCard label="Complimentary" icon={Gift} value={formatNumber(comps)} hint={`${formatNumber(sold - comps)} paid`} />
+        <StatCard label="Money in" icon={Wallet} value={compactMoney(s?.revenue ?? 0, s?.currency)} hint={formatMoney(s?.revenue ?? 0, s?.currency)} />
+        <StatCard label="Checkers" icon={Users} value={formatNumber(assignments.data?.length ?? e.checkerCount ?? 0)} hint={`${e.gates.length} ${e.gates.length === 1 ? "gate" : "gates"}`} />
+      </div>
+
+      {s && (s.tiers.length > 1 || s.revenue > 0 || s.complimentary > 0) && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Ticket types</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-x-8 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
             {s.tiers.map((t) => (
-              <div key={t.tier} className="min-w-[140px] flex-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-foreground">{t.tier}</span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {formatNumber(t.checkedIn)} / {formatNumber(t.sold)}
-                    {t.complimentary > 0 && ` · ${formatNumber(t.complimentary)} comp`}
-                    {t.revenue > 0 && ` · ${formatMoney(t.revenue, s.currency)}`}
+              <div key={t.tier} className="min-w-0">
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="truncate font-semibold text-foreground">{t.tier}</span>
+                  <span className="whitespace-nowrap tabular-nums text-foreground">
+                    {formatNumber(t.checkedIn)} <span className="text-muted-foreground">/ {formatNumber(t.sold)} in</span>
                   </span>
                 </div>
-                <ProgressBar value={t.checkedIn} max={t.sold} className="mt-1 h-1.5" />
+                <ProgressBar value={t.checkedIn} max={t.sold} className="mt-2" />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {[t.revenue > 0 ? formatMoney(t.revenue, s.currency) : null, t.complimentary > 0 ? `${formatNumber(t.complimentary)} complimentary` : null].filter(Boolean).join(" · ") || "\u00a0"}
+                </p>
               </div>
             ))}
-          </div>
-        )}
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs<Tab>
         value={tab}

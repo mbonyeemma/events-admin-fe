@@ -2,35 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Lyxa Events brand: deep purple (#1E0A3C) on white, grey labels — same as the app. */
+/* GatePass: deep purple (#1E0A3C) and sun yellow on a soft grey page, white panels. Same look as the site. */
 @layer base {
   :root {
-    --background: 260 25% 97%;
-    --foreground: 264 71% 14%;
-    --body: 247 19% 26%;
+    --background: 255 27% 97%;
+    --foreground: 259 23% 9%;
+    --body: 259 23% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 264 71% 14%;
+    --card-foreground: 259 23% 9%;
     --primary: 264 71% 14%;
-    --primary-hover: 264 45% 26%;
+    --primary-hover: 263 58% 23%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 260 25% 95%;
-    --secondary-foreground: 264 71% 14%;
-    --muted: 260 25% 96%;
-    --muted-foreground: 233 10% 48%;
-    --accent: 260 36% 95%;
-    --accent-foreground: 264 71% 14%;
-    --destructive: 0 72% 56%;
+    --secondary: 255 27% 97%;
+    --secondary-foreground: 259 23% 9%;
+    --muted: 255 27% 97%;
+    --muted-foreground: 253 7% 44%;
+    --accent: 255 21% 94%;
+    --accent-foreground: 259 23% 9%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --success: 151 68% 38%;
+    --success: 146 80% 35%;
     --success-foreground: 0 0% 100%;
-    --warning: 37 90% 42%;
+    --warning: 21 88% 40%;
     --warning-foreground: 0 0% 100%;
-    --border: 253 18% 90%;
-    --input: 253 18% 86%;
-    --ring: 264 71% 30%;
+    --border: 255 20% 93%;
+    --input: 255 16% 88%;
+    --ring: 258 55% 53%;
     --sidebar: 264 71% 14%;
     --sidebar-foreground: 0 0% 100%;
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
   * {
@@ -50,6 +50,6 @@
 
 @layer components {
   .headline {
-    @apply font-black tracking-tight text-foreground;
+    @apply font-display font-extrabold tracking-[-0.02em] text-foreground;
   }
 }

@@ -4,9 +4,17 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Inter Tight"', "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+        // Same type as the GatePass site: Plus Jakarta Sans for text, Bricolage Grotesque for headlines.
+        sans: ['"Plus Jakarta Sans Variable"', "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+        display: ['"Bricolage Grotesque Variable"', '"Plus Jakarta Sans Variable"', "system-ui", "sans-serif"],
       },
       colors: {
+        brand: { DEFAULT: "#1E0A3C", hover: "#33195E", tint: "#F1EEF7" },
+        /** Sun yellow: the main action on purple, as on the GatePass site. */
+        sun: { DEFAULT: "#FFD23F", hover: "#FFDC66" },
+        ink: "#15121D",
+        faint: "#A3A0AE",
+        violet: "#6D45C9",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -50,6 +58,9 @@ export default {
           DEFAULT: "hsl(var(--sidebar))",
           foreground: "hsl(var(--sidebar-foreground))",
         },
+      },
+      boxShadow: {
+        pop: "0 12px 40px rgba(21,18,29,0.14)",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -63,7 +63,7 @@ async function request<T>(endpoint: string, options: Options = {}): Promise<ApiR
   try {
     response = await fetch(`${BASE_URL}${endpoint}`, { ...init, headers });
   } catch {
-    const message = "Can't reach the Lyxa Events API.";
+    const message = "Can't reach the GatePass server.";
     if (!quiet) toast.error(message);
     throw new ApiError(0, message);
   }

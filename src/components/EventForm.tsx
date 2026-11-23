@@ -112,7 +112,7 @@ export function EventForm({
       </Field>
 
       <Field label="Event name">
-        <Input value={values.name} onChange={(e) => set({ name: e.target.value })} placeholder="Nile Jazz Night" maxLength={150} autoFocus={creating} />
+        <Input value={values.name} onChange={(e) => set({ name: e.target.value })} placeholder="Jazz on the Hill" maxLength={150} autoFocus={creating} />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -143,10 +143,10 @@ export function EventForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Venue">
-          <Input value={values.venue} onChange={(e) => set({ venue: e.target.value })} placeholder="Kampala Serena Hotel" maxLength={150} />
+          <Input value={values.venue} onChange={(e) => set({ venue: e.target.value })} placeholder="Canal Olympia Rebero" maxLength={150} />
         </Field>
         <Field label="Address (optional)">
-          <Input value={values.address} onChange={(e) => set({ address: e.target.value })} placeholder="Kintu Road, Kampala" maxLength={255} />
+          <Input value={values.address} onChange={(e) => set({ address: e.target.value })} placeholder="KG 7 Ave, Kigali" maxLength={255} />
         </Field>
       </div>
 

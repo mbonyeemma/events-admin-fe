@@ -141,6 +141,15 @@ export function formatMoney(amount: number | null | undefined, currency = "UGX")
   return `${currency} ${Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
+/** RWF 1.9M, UGX 250K: short enough for a stat card. */
+export function compactMoney(amount: number | null | undefined, currency = "UGX"): string {
+  if (amount === null || amount === undefined) return "—";
+  const trim = (n: number) => (Math.round(n * 10) / 10).toString();
+  if (amount >= 1_000_000) return `${currency} ${trim(amount / 1_000_000)}M`;
+  if (amount >= 1_000) return `${currency} ${trim(amount / 1_000)}K`;
+  return `${currency} ${amount}`;
+}
+
 /** "200k" → 200000, "1.5m" → 1500000, "700,000" → 700000. null when it isn't an amount. */
 export function parseAmount(text: string): number | null {
   const m = text.trim().toLowerCase().replace(/[,\s]/g, "").replace(/^ugx/, "").match(/^(\d+(?:\.\d+)?)([km]?)$/);

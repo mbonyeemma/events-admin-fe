@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = res.data!;
         // Ticket checkers use the mobile app; only admins manage events here.
         if (data.staff.role !== "admin") {
-          throw new Error("This account is a ticket checker. Use the Lyxa Events app to scan tickets.");
+          throw new Error("This account is a ticket checker. Use the GatePass app to scan tickets.");
         }
         setToken(data.token);
         localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...data.staff, expiresAt: data.expiresAt }));

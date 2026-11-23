@@ -36,7 +36,7 @@ type RoleFilter = "all" | "ticket_checker" | "admin";
 /** Shown once after creating an account or resetting a password. */
 function CredentialsModal({ creds, onClose }: { creds: { name: string; phone: string; password: string } | null; onClose: () => void }) {
   if (!creds) return null;
-  const text = `Lyxa Events sign-in\nPhone: ${creds.phone}\nPassword: ${creds.password}`;
+  const text = `GatePass sign-in\nPhone: ${creds.phone}\nPassword: ${creds.password}`;
   return (
     <Modal
       open
@@ -305,16 +305,17 @@ export default function Checkers() {
   return (
     <div>
       <PageHeader
+        kicker="Your team"
         title="Ticket checkers"
-        description="People who scan tickets with the app, and the admins who run this panel."
+        description="People who scan tickets at the gate, and the admins who run this panel."
         action={
-          <Button onClick={() => setCreating(true)}>
+          <Button className="rounded-full px-5" onClick={() => setCreating(true)}>
             <UserPlus className="h-4 w-4" /> New checker
           </Button>
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segmented<RoleFilter>
           value={role}
           onChange={setRole}
@@ -357,7 +358,7 @@ export default function Checkers() {
                 <TH>Phone</TH>
                 <TH>Role</TH>
                 <TH className="text-right">Events</TH>
-                <TH>Last sign-in</TH>
+                <TH className="hidden 2xl:table-cell">Last sign-in</TH>
                 <TH>Status</TH>
                 <TH />
               </TR>
@@ -371,7 +372,7 @@ export default function Checkers() {
                       <div className="flex items-center gap-3">
                         <Avatar name={s.name} />
                         <div>
-                          <div className="flex items-center gap-2 font-semibold text-foreground">
+                          <div className="flex items-center gap-2 whitespace-nowrap font-semibold text-foreground">
                             {s.name}
                             {me && <Badge variant="muted">You</Badge>}
                           </div>
@@ -388,7 +389,7 @@ export default function Checkers() {
                         {s.assignmentCount ?? 0}
                       </button>
                     </TD>
-                    <TD className="whitespace-nowrap text-xs text-muted-foreground">{s.lastLoginAt ? formatDateTime(s.lastLoginAt) : "Never"}</TD>
+                    <TD className="hidden whitespace-nowrap text-xs text-muted-foreground 2xl:table-cell">{s.lastLoginAt ? formatDateTime(s.lastLoginAt) : "Never"}</TD>
                     <TD>{s.isActive ? <Badge variant="success">Active</Badge> : <Badge variant="muted">Inactive</Badge>}</TD>
                     <TD>
                       <div className="flex justify-end gap-1">

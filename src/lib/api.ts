@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 
 /** Production API on Railway. */
-export const PRODUCTION_API_URL = "https://events-app-be-production.up.railway.app";
+export const PRODUCTION_API_URL = "https://api.getpass.events";
 
 /**
  * VITE_API_URL overrides the production API. Set it empty for "same origin":

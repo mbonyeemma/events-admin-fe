@@ -79,7 +79,7 @@ export default function Settings() {
                 <span className="text-muted-foreground">Role</span>
                 <Badge variant="solid">Admin</Badge>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">To change your name or phone number, ask another admin to edit you under Users.</p>
+              <p className="mt-3 text-xs text-muted-foreground">To change your name or phone number, ask another admin to edit you under Team.</p>
             </CardContent>
           </Card>
           <Card>

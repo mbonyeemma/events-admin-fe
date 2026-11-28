@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import { CalendarDays, KeyRound, Pencil, Power, RefreshCw, Search, Trash2, UserPlus, Users } from "lucide-react";
+import { CalendarDays, KeyRound, Pencil, Power, RefreshCw, Search, Store, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/Layout";
 import {
@@ -27,7 +27,7 @@ import {
   useConfirm,
 } from "@/components/ui";
 import { RoleBadge } from "@/components/StatusBadges";
-import { OrganisersEmpty } from "@/components/OrganisersEmpty";
+import { matchAccount, OrganisersTable, useOrganisers } from "@/components/Organisers";
 import { useAuth } from "@/contexts/AuthContext";
 import { eventPhase, formatDate, formatDateTime, formatPhone, formatTime, generatePassword } from "@/lib/utils";
 import { createStaff, deleteStaff, listStaff, listStaffEvents, unassignStaff, updateStaff, type Role, type Staff } from "@/services/admin";
@@ -123,7 +123,7 @@ function StaffFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? `Edit ${staff!.name}` : "New user"}
+      title={editing ? `Edit ${staff!.name}` : "New member"}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -243,7 +243,7 @@ export default function Checkers() {
   const confirm = useConfirm();
   const { admin } = useAuth();
   const [params, setParams] = useSearchParams();
-  const [role, setRole] = useState<RoleFilter>("all");
+  const [role, setRole] = useState<RoleFilter>(() => (params.get("role") === "organiser" ? "organiser" : "all"));
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Staff | null>(null);
   const [viewing, setViewing] = useState<Staff | null>(null);
@@ -252,6 +252,8 @@ export default function Checkers() {
   const setCreating = (v: boolean) => setParams(v ? { new: "1" } : {}, { replace: true });
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["staff"], queryFn: () => listStaff().then((r) => r.data ?? []) });
+  const organisers = useOrganisers();
+  const organiserRows = useMemo(() => (organisers.data ?? []).filter((a) => matchAccount(a, search)), [organisers.data, search]);
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -288,7 +290,7 @@ export default function Checkers() {
     const ok = await confirm({
       title: `Delete ${s.name}?`,
       message: "They're removed from every event they were assigned to and can't sign in. This can't be undone.",
-      confirmLabel: "Delete user",
+      confirmLabel: "Delete",
       danger: true,
     });
     if (!ok) return;
@@ -316,7 +318,7 @@ export default function Checkers() {
             /* toast shown */
           }
         }
-      } else toast.error(error instanceof Error ? error.message : "Couldn't delete this user.");
+      } else toast.error(error instanceof Error ? error.message : `Couldn't delete ${s.name}.`);
     }
   };
 
@@ -343,12 +345,10 @@ export default function Checkers() {
   return (
     <div>
       <PageHeader
-        kicker="Your team"
-        title="Users"
-        description="Admins run this panel, ticket checkers scan tickets at the gate, and organisers post events."
+        title="Team"
         action={
           <Button className="rounded-full px-5" onClick={() => setCreating(true)}>
-            <UserPlus className="h-4 w-4" /> Add user
+            <UserPlus className="h-4 w-4" /> Add member
           </Button>
         }
       />
@@ -361,32 +361,42 @@ export default function Checkers() {
             { value: "all", label: `All ${data ? data.length : ""}`.trim() },
             { value: "admin", label: `Admins ${data ? counts.admins : ""}`.trim() },
             { value: "ticket_checker", label: `Ticket checkers ${data ? counts.checkers : ""}`.trim() },
-            { value: "organiser", label: "Organisers" },
+            { value: "organiser", label: `Organisers ${organisers.data ? organisers.data.length : ""}`.trim() },
           ]}
         />
         <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Search name or phone" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Search name, email or phone" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
       </div>
 
       <Card>
-        {isLoading ? (
+        {role === "organiser" ? (
+          organisers.isLoading ? (
+            <Loading />
+          ) : organisers.isError ? (
+            <div className="p-4">
+              <PageError />
+            </div>
+          ) : organiserRows.length === 0 ? (
+            <EmptyState icon={Store} title={search ? "No one matches." : "No organisers yet."} />
+          ) : (
+            <OrganisersTable accounts={organiserRows} manage />
+          )
+        ) : isLoading ? (
           <Loading />
         ) : isError ? (
           <div className="p-4">
             <PageError />
           </div>
-        ) : role === "organiser" ? (
-          <OrganisersEmpty />
         ) : rows.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={search ? "No one matches." : "No users yet."}
+            title={search ? "No one matches." : "No one yet."}
             action={
               !search ? (
                 <Button size="sm" onClick={() => setCreating(true)}>
-                  Add a user
+                  Add member
                 </Button>
               ) : undefined
             }

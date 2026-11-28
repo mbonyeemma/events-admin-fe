@@ -180,13 +180,7 @@ export const TICKET_COLORS = ["#1E0A3C", "#7C3AED", "#2563EB", "#0E9F6E", "#C9A2
  * and saved as JPEG; small PNGs keep their transparency.
  */
 export async function prepareImage(file: File, maxWidth = 1600): Promise<string> {
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Choose a JPEG, PNG or WebP image.");
-  const original = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Couldn't read the image."));
-    reader.readAsDataURL(file);
-  });
+  const original = await readImageFile(file);
   const img = await loadImage(original);
   if (file.type === "image/png" && img.width <= maxWidth && file.size <= 1_500_000) return original;
   const scale = Math.min(1, maxWidth / img.width);
@@ -198,6 +192,40 @@ export async function prepareImage(file: File, maxWidth = 1600): Promise<string>
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", 0.86);
+}
+
+/** Event banners: landscape 16:9, saved at 1600 × 900. The server refuses banners under 1200 × 675. */
+export const BANNER = { width: 1600, height: 900, minWidth: 1200, minHeight: 675 } as const;
+
+/** Centre-crop an image to 16:9 and save it as a 1600 × 900 JPEG. Throws when it's too small. */
+export async function prepareBanner(file: File): Promise<string> {
+  const img = await loadImage(await readImageFile(file));
+  const width = img.naturalWidth;
+  const height = img.naturalHeight;
+  const ratio = BANNER.width / BANNER.height;
+  // The largest 16:9 area in the middle of the image.
+  const sw = width / height > ratio ? Math.round(height * ratio) : width;
+  const sh = width / height > ratio ? height : Math.round(width / ratio);
+  if (sw < BANNER.minWidth || sh < BANNER.minHeight) throw new Error(`Use a landscape image at least ${BANNER.minWidth} × ${BANNER.minHeight}.`);
+  const canvas = document.createElement("canvas");
+  canvas.width = BANNER.width;
+  canvas.height = BANNER.height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, Math.round((width - sw) / 2), Math.round((height - sh) / 2), sw, sh, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.86);
+}
+
+function readImageFile(file: File): Promise<string> {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return Promise.reject(new Error("Choose a JPEG, PNG or WebP image."));
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Couldn't read the image."));
+    reader.readAsDataURL(file);
+  });
 }
 
 export function loadImage(src: string): Promise<HTMLImageElement> {

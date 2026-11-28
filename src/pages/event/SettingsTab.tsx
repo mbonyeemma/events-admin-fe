@@ -6,7 +6,6 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Copy
 import { EventForm, eventToForm, formToInput, validateEvent, type EventFormValues } from "@/components/EventForm";
 import { updateEvent, type EventSummary } from "@/services/admin";
 import { useEventActions } from "./actions";
-import { TicketTypesCard } from "./TicketTypesCard";
 import { TicketDesignCard } from "./TicketDesignCard";
 import { refreshEvent } from "./refresh";
 
@@ -81,8 +80,6 @@ export default function SettingsTab({ event, ticketCount }: { event: EventSummar
           </div>
         </CardContent>
       </Card>
-
-      <TicketTypesCard event={event} />
 
       <TicketDesignCard event={event} />
 

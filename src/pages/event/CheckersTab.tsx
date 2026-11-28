@@ -134,7 +134,7 @@ function AssignModal({
             icon={Users}
             title={search ? "No one matches." : "Everyone active is already assigned."}
             action={
-              <Link to="/users?new=1" className="text-sm font-semibold text-foreground hover:underline">
+              <Link to="/team?new=1" className="text-sm font-semibold text-foreground hover:underline">
                 Add a ticket checker
               </Link>
             }

@@ -1,20 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, CalendarDays, DoorOpen, Gift, MapPin, Pencil, Power, ScanLine, Ticket, Trash2, Users, Wallet } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, CopyButton, Loading, PageError, ProgressBar, StatCard, Tabs } from "@/components/ui";
-import { EventStatusBadge } from "@/components/StatusBadges";
+import { Badge, Button, CopyButton, Loading, PageError, StatCard, Tabs } from "@/components/ui";
+import { ApprovalBadge, EventStatusBadge } from "@/components/StatusBadges";
 import { compactMoney, formatDate, formatMoney, formatNumber, formatTime, percent } from "@/lib/utils";
-import { getEvent, getEventStats, listAssignments, mediaUrl, type EventSummary } from "@/services/admin";
+import { getEvent, getEventStats, listAssignments, listTicketTypes, mediaUrl, type EventSummary } from "@/services/admin";
 import { useEventActions } from "@/pages/event/actions";
+import { ticketsLeft } from "@/pages/event/TicketTypesCard";
 import { ApprovalPanel } from "@/components/ApprovalPanel";
 import TicketsTab from "@/pages/event/TicketsTab";
+import TicketTypesTab from "@/pages/event/TicketTypesTab";
 import CheckersTab from "@/pages/event/CheckersTab";
 import GatesTab from "@/pages/event/GatesTab";
 import ScansTab from "@/pages/event/ScansTab";
 import SettingsTab from "@/pages/event/SettingsTab";
 
-type Tab = "tickets" | "checkers" | "gates" | "scans" | "settings";
-const TABS: Tab[] = ["tickets", "checkers", "gates", "scans", "settings"];
+type Tab = "tickets" | "types" | "checkers" | "gates" | "scans" | "settings";
+const TABS: Tab[] = ["tickets", "types", "checkers", "gates", "scans", "settings"];
 
 /** Edit, deactivate or reactivate, and delete: at the top of the event page. */
 function EventActions({ event, onEdit }: { event: Pick<EventSummary, "id" | "name" | "isActive" | "ticketCount">; onEdit: () => void }) {
@@ -54,6 +56,7 @@ export default function EventDetail() {
     refetchInterval: 15_000,
   });
   const assignments = useQuery({ queryKey: ["assignments", eventId], queryFn: () => listAssignments(eventId).then((r) => r.data ?? []) });
+  const types = useQuery({ queryKey: ["ticket-types", eventId], queryFn: () => listTicketTypes(eventId).then((r) => r.data ?? []) });
 
   if (event.isLoading) return <Loading />;
   if (event.isError || !event.data) return <PageError message="Event not found." />;
@@ -63,6 +66,7 @@ export default function EventDetail() {
   const sold = s?.sold ?? e.ticketCount;
   const checkedIn = s?.checkedIn ?? e.admittedCount;
   const comps = s?.complimentary ?? 0;
+  const left = types.data ? ticketsLeft(types.data, e.ticketLimit, sold) : e.ticketLimit !== null ? Math.max(e.ticketLimit - sold, 0) : null;
 
   return (
     <div>
@@ -87,8 +91,7 @@ export default function EventDetail() {
           <div className="flex flex-wrap items-center gap-2">
             <EventStatusBadge startsAt={e.startsAt} isActive={e.isActive} />
             {e.eventType && <Badge variant="muted">{e.eventType}</Badge>}
-            {e.approval === "pending" && <Badge variant="warning">Waiting for approval</Badge>}
-            {e.approval === "rejected" && <Badge variant="destructive">Rejected</Badge>}
+            <ApprovalBadge approval={e.approval} />
             {!e.isListed && <Badge variant="warning">Not on the GatePass site</Badge>}
             {e.isListed && e.isFeatured && <Badge variant="solid">Featured on the site</Badge>}
           </div>
@@ -133,7 +136,8 @@ export default function EventDetail() {
           icon={Ticket}
           value={formatNumber(sold)}
           hint={[
-            e.ticketLimit !== null ? (e.ticketLimitLocked ? `of ${formatNumber(e.ticketLimit)}, fixed` : `of ${formatNumber(e.ticketLimit)} · ${formatNumber(Math.max(e.ticketLimit - sold, 0))} left`) : "No limit",
+            e.ticketLimit !== null ? `of ${formatNumber(e.ticketLimit)}${e.ticketLimitLocked ? ", fixed" : ""}` : null,
+            left === null ? "No limit" : left === 0 ? "Sold out" : `${formatNumber(left)} left`,
             s?.voided ? `${formatNumber(s.voided)} voided` : null,
           ]
             .filter(Boolean)
@@ -144,36 +148,13 @@ export default function EventDetail() {
         <StatCard label="Checkers" icon={Users} value={formatNumber(assignments.data?.length ?? e.checkerCount ?? 0)} hint={`${e.gates.length} ${e.gates.length === 1 ? "gate" : "gates"}`} />
       </div>
 
-      {s && (s.tiers.length > 1 || s.revenue > 0 || s.complimentary > 0) && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Ticket types</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-x-8 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-            {s.tiers.map((t) => (
-              <div key={t.tier} className="min-w-0">
-                <div className="flex items-baseline justify-between gap-3 text-sm">
-                  <span className="truncate font-semibold text-foreground">{t.tier}</span>
-                  <span className="whitespace-nowrap tabular-nums text-foreground">
-                    {formatNumber(t.checkedIn)} <span className="text-muted-foreground">/ {formatNumber(t.sold)} in</span>
-                  </span>
-                </div>
-                <ProgressBar value={t.checkedIn} max={t.sold} className="mt-2" />
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  {[t.revenue > 0 ? formatMoney(t.revenue, s.currency) : null, t.complimentary > 0 ? `${formatNumber(t.complimentary)} complimentary` : null].filter(Boolean).join(" · ") || "\u00a0"}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
       <Tabs<Tab>
         value={tab}
         onChange={setTab}
         className="mb-5"
         tabs={[
           { value: "tickets", label: "Tickets", count: sold + (s?.voided ?? 0) },
+          { value: "types", label: "Ticket types", count: types.data?.length },
           { value: "checkers", label: "Ticket checkers", count: assignments.data?.length },
           { value: "gates", label: "Gates", count: e.gates.length },
           { value: "scans", label: "Scan log" },
@@ -182,6 +163,7 @@ export default function EventDetail() {
       />
 
       {tab === "tickets" && <TicketsTab event={e} />}
+      {tab === "types" && <TicketTypesTab event={e} stats={s} issued={sold} />}
       {tab === "checkers" && <CheckersTab event={e} assignments={assignments.data ?? []} loading={assignments.isLoading} />}
       {tab === "gates" && <GatesTab event={e} assignments={assignments.data ?? []} />}
       {tab === "scans" && <ScansTab event={e} />}

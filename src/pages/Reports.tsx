@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight, CircleAlert, Clock, Download, Receipt, ShieldCheck, Users, Wallet } from "lucide-react";
+import { ArrowRight, CalendarDays, CircleAlert, Clock, Download, Receipt, ShieldCheck, Store, Users, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import { Badge, Button, Card, EmptyState, Loading, PageError, Pagination, Segmented, StatCard, Table, Tabs, TBody, TD, TH, THead, TR } from "@/components/ui";
 import { RoleBadge } from "@/components/StatusBadges";
-import { OrganisersEmpty } from "@/components/OrganisersEmpty";
+import { OrganisersTable, useOrganisers } from "@/components/Organisers";
 import { ApiError } from "@/lib/api";
 import { compactMoney, download, formatDateTime, formatMoney, formatNumber, formatPhone, toCsv } from "@/lib/utils";
 import { listOrders, listStaff, type Order, type OrderStatus } from "@/services/admin";
@@ -197,7 +197,7 @@ function UsersReport() {
   return (
     <>
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard tone="brand" label="Users" icon={Users} value={data ? formatNumber(list.length) : "–"} hint={data ? `${formatNumber(active)} active` : undefined} />
+        <StatCard tone="brand" label="Team" icon={Users} value={data ? formatNumber(list.length) : "–"} hint={data ? `${formatNumber(active)} active` : undefined} />
         <StatCard label="Admins" icon={ShieldCheck} value={data ? formatNumber(admins) : "–"} hint="Run this panel" />
         <StatCard label="Ticket checkers" icon={Users} value={data ? formatNumber(checkers) : "–"} hint="Scan at the gate" />
         <StatCard label="Signed in this week" icon={Clock} value={data ? formatNumber(recent) : "–"} hint="Last 7 days" />
@@ -206,8 +206,8 @@ function UsersReport() {
       <Card className="mt-6">
         <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-5 sm:px-6 sm:pt-6">
           <h3 className="text-lg font-bold text-foreground">Everyone</h3>
-          <Link to="/users" className="flex items-center gap-1 text-sm font-semibold text-violet hover:underline">
-            Manage users <ArrowRight className="h-4 w-4" />
+          <Link to="/team" className="flex items-center gap-1 text-sm font-semibold text-violet hover:underline">
+            Manage team <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
         {isLoading ? (
@@ -250,6 +250,47 @@ function UsersReport() {
   );
 }
 
+function OrganisersReport() {
+  const { data, isLoading, isError } = useOrganisers();
+  const list = data ?? [];
+  const week = Date.now() - 7 * 86_400_000;
+  const active = list.filter((a) => a.isActive).length;
+  const events = list.reduce((n, a) => n + a.eventCount, 0);
+  const team = list.reduce((n, a) => n + a.teamCount, 0);
+  const recent = list.filter((a) => a.lastLoginAt && new Date(a.lastLoginAt).getTime() > week).length;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <StatCard tone="brand" label="Organisers" icon={Store} value={data ? formatNumber(list.length) : "–"} hint={data ? `${formatNumber(active)} active` : undefined} />
+        <StatCard label="Events" icon={CalendarDays} value={data ? formatNumber(events) : "–"} />
+        <StatCard label="Their team" icon={Users} value={data ? formatNumber(team) : "–"} />
+        <StatCard label="Signed in this week" icon={Clock} value={data ? formatNumber(recent) : "–"} hint="Last 7 days" />
+      </div>
+
+      <Card className="mt-6">
+        <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-5 sm:px-6 sm:pt-6">
+          <h3 className="text-lg font-bold text-foreground">Organisers</h3>
+          <Link to="/team?role=organiser" className="flex items-center gap-1 text-sm font-semibold text-violet hover:underline">
+            Manage <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        {isLoading ? (
+          <Loading />
+        ) : isError ? (
+          <div className="p-4">
+            <PageError />
+          </div>
+        ) : list.length === 0 ? (
+          <EmptyState icon={Store} title="No organisers yet." />
+        ) : (
+          <OrganisersTable accounts={list} />
+        )}
+      </Card>
+    </>
+  );
+}
+
 export default function Reports() {
   const [params, setParams] = useSearchParams();
   const tab = (TABS.includes(params.get("tab") as Tab) ? params.get("tab") : "transactions") as Tab;
@@ -263,17 +304,13 @@ export default function Reports() {
         className="mb-6"
         tabs={[
           { value: "transactions", label: "Transactions" },
-          { value: "users", label: "Users" },
+          { value: "users", label: "Team" },
           { value: "organisers", label: "Organisers" },
         ]}
       />
       {tab === "transactions" && <Transactions />}
       {tab === "users" && <UsersReport />}
-      {tab === "organisers" && (
-        <Card>
-          <OrganisersEmpty />
-        </Card>
-      )}
+      {tab === "organisers" && <OrganisersReport />}
     </div>
   );
 }

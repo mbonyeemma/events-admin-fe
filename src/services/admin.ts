@@ -5,6 +5,8 @@ import { api, BASE_URL } from "@/lib/api";
 export type Role = "ticket_checker" | "admin";
 export type TicketStatus = "valid" | "used" | "void";
 export type ScanOutcome = "valid" | "used" | "invalid";
+/** draft: an organiser is still working on it; pending: sent for approval. */
+export type EventApproval = "draft" | "pending" | "approved" | "rejected";
 
 export interface Staff {
   staffId: string;
@@ -50,9 +52,9 @@ export interface EventSummary {
   isFeatured: boolean;
   isListed: boolean;
   /** Organisers' events wait for an admin before they go on the site. */
-  approval: "approved" | "pending" | "rejected";
+  approval: EventApproval;
   /** Organiser who posted it on the GatePass site, if any. */
-  owner: { accountId: string; name: string; organization: string | null; phone: string } | null;
+  owner: { accountId: string; name: string; organization: string | null; phone: string; email: string | null } | null;
   /** Tickets sold (not voided, not complimentary) and their value, in the tickets' currency. */
   soldCount: number;
   revenue: number;
@@ -190,6 +192,22 @@ export interface Order {
   payment?: { provider: string; txref: string | null; wallet: string | null; providerStatus: string | null; providerRef: string | null };
 }
 
+/** A GatePass site account: a buyer, or an organiser who posts events (with a team added by email). */
+export interface AdminAccount {
+  accountId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: "attendee" | "organizer";
+  organization: string | null;
+  /** false = closed: can't sign in. */
+  isActive: boolean;
+  eventCount: number;
+  teamCount: number;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
 export interface Overview {
   events: { total: number; upcoming: number };
   tickets: { issued: number; checkedIn: number };
@@ -234,6 +252,11 @@ export const updateStaff = (
 /** Remove a user added by mistake. 409 when they've scanned tickets (deactivate them instead). Quiet: the caller explains. */
 export const deleteStaff = (staffId: string) => api.del(`/admin/staff/${staffId}`, { quiet: true });
 export const listStaffEvents = (staffId: string) => api.get<StaffAssignment[]>(`/admin/staff/${staffId}/events`);
+
+// --- GatePass site accounts (organisers and buyers) ---
+export const listAccounts = (role?: AdminAccount["role"]) => api.get<AdminAccount[]>("/admin/accounts", { role });
+/** Close (false) or reopen (true) an account. */
+export const setAccountActive = (accountId: string, isActive: boolean) => api.put(`/admin/accounts/${accountId}`, { isActive });
 
 // --- Events ---
 export const listEvents = () => api.get<EventSummary[]>("/admin/events");
@@ -288,7 +311,8 @@ export const updateTicketType = (eventId: string, typeId: string, body: Partial<
 export const deleteTicketType = (eventId: string, typeId: string) => api.del(`/admin/events/${eventId}/ticket-types/${typeId}`);
 
 // --- Images (event banners, ticket artwork) ---
-export const uploadImage = (dataUrl: string) =>
-  api.post<{ id: string; url: string; contentType: string; size: number }>("/admin/media", { data: dataUrl });
+/** `purpose: "banner"`: the server checks it is 16:9 and at least 1200 × 675. */
+export const uploadImage = (dataUrl: string, purpose?: "banner") =>
+  api.post<{ id: string; url: string; contentType: string; size: number }>("/admin/media", { data: dataUrl, ...(purpose && { purpose }) });
 /** Absolute URL of an uploaded image. */
 export const mediaUrl = (id: string | null | undefined) => (id ? `${BASE_URL}/media/${id}` : null);

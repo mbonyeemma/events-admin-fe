@@ -14,8 +14,10 @@ export default function NewEvent() {
   const navigate = useNavigate();
   const [values, setValues] = useState<EventFormValues>(emptyEvent);
   const [saving, setSaving] = useState(false);
+  const [tried, setTried] = useState(false);
 
   const submit = async () => {
+    setTried(true);
     const error = validateEvent(values, true);
     if (error) return toast.error(error);
     setSaving(true);
@@ -28,7 +30,7 @@ export default function NewEvent() {
       toast.success("Event created. Add ticket types next.");
       qc.invalidateQueries({ queryKey: ["events"] });
       qc.invalidateQueries({ queryKey: ["overview"] });
-      navigate(`/events/${res.data!.id}`, { replace: true });
+      navigate(`/events/${res.data!.id}?tab=types`, { replace: true });
     } catch {
       /* toast shown */
     } finally {
@@ -51,7 +53,7 @@ export default function NewEvent() {
           void submit();
         }}
       >
-        <EventForm values={values} onChange={setValues} creating layout="page" />
+        <EventForm values={values} onChange={setValues} creating layout="page" showErrors={tried} />
 
         {/* Stays in view at the bottom while you fill in the form */}
         <div className="sticky bottom-4 z-20 mt-6 flex items-center justify-end gap-2 rounded-2xl bg-white/95 p-3 shadow-pop backdrop-blur">

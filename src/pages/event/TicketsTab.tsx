@@ -208,7 +208,7 @@ function IssueTicketsModal({
         </Select>
       </Field>
     ) : (
-      <Field label="Tier" hint="Add ticket types with prices in Settings to sell VIP, Table, and so on.">
+      <Field label="Tier" hint="Add VIP, Table and more under Ticket types.">
         <Input value={one.tier} onChange={(e) => setOne({ ...one, tier: e.target.value })} maxLength={60} />
       </Field>
     );

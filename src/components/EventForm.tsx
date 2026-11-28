@@ -17,6 +17,8 @@ export interface EventFormValues {
   ticketLimitLocked: boolean;
   /** Edit mode: the limit was already fixed on the server. */
   limitFixed?: boolean;
+  /** Edit mode: the event has a banner, so it can't go without one. */
+  hadBanner?: boolean;
   gates: string[];
   accessCode: string;
   // On the GatePass booking site
@@ -81,6 +83,7 @@ export const eventToForm = (e: EventSummary): EventFormValues => ({
   ticketLimit: e.ticketLimit ? String(e.ticketLimit) : "",
   ticketLimitLocked: e.ticketLimitLocked,
   limitFixed: e.ticketLimitLocked,
+  hadBanner: !!e.bannerId,
   gates: [],
   accessCode: "",
   description: e.description ?? "",
@@ -112,6 +115,9 @@ export const formToInput = (v: EventFormValues): EventDetailsInput => ({
   isListed: v.isListed,
 });
 
+/** Banners are required. Older events without one can still be edited. */
+export const bannerMissing = (v: EventFormValues, creating: boolean) => !v.bannerId && (creating || !!v.hadBanner);
+
 export function validateEvent(v: EventFormValues, creating: boolean): string | null {
   if (!v.name.trim()) return "Give the event a name.";
   if (!v.venue.trim()) return "Add the venue.";
@@ -121,24 +127,28 @@ export function validateEvent(v: EventFormValues, creating: boolean): string | n
   if (v.ticketLimitLocked && !v.ticketLimit) return "Set the total tickets before fixing it.";
   if (creating && v.gates.length === 0) return "Add at least one gate.";
   if (v.accessCode && !/^[A-Za-z0-9]{4,20}$/.test(v.accessCode.replace(/[\s-]/g, ""))) return "Event code: 4–20 letters or digits.";
+  if (bannerMissing(v, creating)) return "Add a banner.";
   return null;
 }
 
-/** Banner, name, type, location, date and time, ticket limit; on create also gates and an optional event code. */
 /**
- * The event's details. `layout="stack"` (default) is one column, for the event's Settings tab.
+ * The event's details: banner, name, type, location, date and time, ticket limit; on create also gates
+ * and an optional event code. `layout="stack"` (default) is one column, for the event's Settings tab.
  * `layout="page"` lays the same fields out as cards in two columns, for the New event page.
+ * `showErrors`: after a failed submit, mark a missing banner (in edit mode it's always marked).
  */
 export function EventForm({
   values,
   onChange,
   creating,
   layout = "stack",
+  showErrors,
 }: {
   values: EventFormValues;
   onChange: (v: EventFormValues) => void;
   creating?: boolean;
   layout?: "stack" | "page";
+  showErrors?: boolean;
 }) {
   const [gate, setGate] = useState("");
   const set = (patch: Partial<EventFormValues>) => onChange({ ...values, ...patch });
@@ -150,14 +160,10 @@ export function EventForm({
     setGate("");
   };
 
+  const noBanner = !values.bannerId && (!creating || !!showErrors);
   const banner = (
-    <Field label="Banner">
-      <ImagePicker
-        imageId={values.bannerId}
-        onChange={(bannerId) => set({ bannerId })}
-        emptyLabel="Add a banner"
-        hint="A wide image works best, e.g. 1600 × 800. It also goes on tickets unless you pick a ticket image."
-      />
+    <Field label="Banner" error={noBanner ? "Add a banner" : undefined}>
+      <ImagePicker imageId={values.bannerId} onChange={(bannerId) => set({ bannerId })} emptyLabel="Add a banner" aspect="banner" required invalid={noBanner} />
     </Field>
   );
 

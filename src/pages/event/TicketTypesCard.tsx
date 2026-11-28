@@ -6,7 +6,6 @@ import {
   Badge,
   Button,
   Card,
-  CardDescription,
   CardHeader,
   CardTitle,
   EmptyState,
@@ -17,7 +16,7 @@ import {
   Textarea,
   useConfirm,
 } from "@/components/ui";
-import { cn, formatMoney, parseAmount, TICKET_COLORS } from "@/lib/utils";
+import { cn, formatMoney, formatNumber, parseAmount, TICKET_COLORS } from "@/lib/utils";
 import {
   createTicketType,
   deleteTicketType,
@@ -148,7 +147,29 @@ function TicketTypeModal({ event, type, onClose }: { event: EventSummary; type: 
   );
 }
 
-export function TicketTypesCard({ event }: { event: EventSummary }) {
+/** The smaller of two limits; null = no limit. */
+const minLeft = (a: number | null, b: number | null) => (a === null ? b : b === null ? a : Math.min(a, b));
+
+/**
+ * Tickets the event can still issue (null = no limit): what's left of its total, and of the ticket
+ * types on sale, whichever runs out first. `issued`: its tickets issued, not void.
+ */
+export function ticketsLeft(types: TicketType[], ticketLimit: number | null, issued: number): number | null {
+  const eventLeft = ticketLimit !== null ? Math.max(ticketLimit - issued, 0) : null;
+  const active = types.filter((t) => t.isActive);
+  const typesLeft = active.length === 0 || active.some((t) => t.remaining === null) ? null : active.reduce((n, t) => n + (t.remaining ?? 0), 0);
+  return minLeft(typesLeft, eventLeft);
+}
+
+/** "12 left", "Sold out" or "No limit". */
+function Left({ n }: { n: number | null }) {
+  if (n === null) return <div className="font-bold text-muted-foreground">No limit</div>;
+  if (n === 0) return <div className="font-bold text-destructive">Sold out</div>;
+  return <div className="font-bold tabular-nums text-foreground">{formatNumber(n)} left</div>;
+}
+
+/** Ticket types with what's left of each. `issued`: the event's tickets issued (not void), for its total. */
+export function TicketTypesCard({ event, issued = event.ticketCount }: { event: EventSummary; issued?: number }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<TicketType | "new" | null>(null);
@@ -185,13 +206,16 @@ export function TicketTypesCard({ event }: { event: EventSummary }) {
 
   const typeTotal = types.every((t) => t.capacity !== null) ? types.reduce((s, t) => s + (t.capacity ?? 0), 0) : null;
 
+  // What can still be issued: each type's own quantity, and the event's total, whichever runs out first.
+  const eventLeft = event.ticketLimit !== null ? Math.max(event.ticketLimit - issued, 0) : null;
+  const leftOf = (t: TicketType) => minLeft(t.remaining, eventLeft);
+  const totalLeft = ticketsLeft(types, event.ticketLimit, issued);
+  const revenue = types.reduce((n, t) => n + t.revenue, 0);
+
   return (
     <Card>
       <CardHeader className="flex-wrap">
-        <div className="space-y-1">
-          <CardTitle>Ticket types</CardTitle>
-          <CardDescription>What you sell: e.g. Ordinary, VIP 1, VIP 2, Table, each with its price, quantity and notes.</CardDescription>
-        </div>
+        <CardTitle>Ticket types</CardTitle>
         <Button onClick={() => setEditing("new")}>
           <Plus className="h-4 w-4" /> Add ticket type
         </Button>
@@ -199,25 +223,30 @@ export function TicketTypesCard({ event }: { event: EventSummary }) {
       {isLoading ? (
         <Loading />
       ) : types.length === 0 ? (
-        <EmptyState icon={Tags} title="No ticket types yet. Tickets use a free-text tier until you add some." />
+        <EmptyState icon={Tags} title="No ticket types yet." />
       ) : (
         <div className="divide-y border-t">
           {types.map((t) => (
-            <div key={t.id} className={cn("flex flex-wrap items-start gap-4 px-5 py-4", !t.isActive && "opacity-60")}>
+            <div key={t.id} className={cn("flex flex-wrap items-start gap-4 px-5 py-4 sm:px-6", !t.isActive && "opacity-60")}>
               <span className="mt-1 h-5 w-5 shrink-0 rounded-full" style={{ background: t.color ?? event.ticketColor }} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-bold text-foreground">{t.name}</span>
                   {!t.isActive && <Badge variant="muted">Off</Badge>}
-                  {t.remaining === 0 && t.isActive && <Badge variant="destructive">Sold out</Badge>}
                 </div>
                 {t.notes && <p className="mt-0.5 text-sm text-muted-foreground">{t.notes}</p>}
               </div>
-              <div className="text-right">
+              <div className="w-36 text-right">
                 <div className="font-bold tabular-nums text-foreground">{t.price === 0 ? "Free" : formatMoney(t.price, t.currency)}</div>
                 <div className="text-xs tabular-nums text-muted-foreground">
-                  {t.capacity !== null ? `${t.issued} / ${t.capacity} issued` : `${t.issued} issued`}
-                  {t.complimentary > 0 && ` · ${t.complimentary} comp`} · {formatMoney(t.revenue, t.currency)}
+                  {t.revenue > 0 ? formatMoney(t.revenue, t.currency) : "\u00a0"}
+                </div>
+              </div>
+              <div className="w-32 text-right">
+                <Left n={leftOf(t)} />
+                <div className="text-xs tabular-nums text-muted-foreground">
+                  {t.capacity !== null ? `${formatNumber(t.issued)} / ${formatNumber(t.capacity)}` : formatNumber(t.issued)} issued
+                  {t.complimentary > 0 && ` · ${formatNumber(t.complimentary)} comp`}
                 </div>
               </div>
               <div className="flex gap-1">
@@ -241,6 +270,20 @@ export function TicketTypesCard({ event }: { event: EventSummary }) {
               </div>
             </div>
           ))}
+          {/* Event total */}
+          <div className="flex flex-wrap items-start gap-4 bg-muted/60 px-5 py-4 sm:px-6">
+            <span className="h-5 w-5 shrink-0" />
+            <div className="min-w-0 flex-1 font-bold text-foreground">Total</div>
+            <div className="w-36 text-right font-bold tabular-nums text-foreground">{revenue > 0 ? formatMoney(revenue, types[0].currency) : "\u00a0"}</div>
+            <div className="w-32 text-right">
+              <Left n={totalLeft} />
+              <div className="text-xs tabular-nums text-muted-foreground">
+                {totalLeft !== null ? `${formatNumber(issued)} / ${formatNumber(issued + totalLeft)}` : formatNumber(issued)} issued
+              </div>
+            </div>
+            {/* Lines up with the row actions */}
+            <span className="hidden w-[116px] sm:block" />
+          </div>
         </div>
       )}
       {event.ticketLimit !== null && typeTotal !== null && typeTotal > event.ticketLimit && (

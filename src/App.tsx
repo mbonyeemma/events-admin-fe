@@ -24,14 +24,15 @@ const routes: Array<[string, JSX.Element]> = [
   ["/events", <Events />],
   ["/events/new", <NewEvent />],
   ["/events/:eventId", <EventDetail />],
-  ["/users", <Checkers />],
+  ["/team", <Checkers />],
   ["/reports", <Reports />],
   ["/settings", <Settings />],
 ];
 
-function CheckersRedirect() {
+/** Old addresses keep working, with their ?query. */
+function Redirect({ to }: { to: string }) {
   const { search } = useLocation();
-  return <Navigate to={`/users${search}`} replace />;
+  return <Navigate to={`${to}${search}`} replace />;
 }
 
 export default function App() {
@@ -54,8 +55,9 @@ export default function App() {
                   }
                 />
               ))}
-              {/* "Ticket checkers" is now "Users" */}
-              <Route path="/checkers" element={<CheckersRedirect />} />
+              {/* "Ticket checkers", then "Users", is now "Team" */}
+              <Route path="/checkers" element={<Redirect to="/team" />} />
+              <Route path="/users" element={<Redirect to="/team" />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

@@ -21,7 +21,7 @@ import {
   THead,
   TR,
 } from "@/components/ui";
-import { EventStatusBadge } from "@/components/StatusBadges";
+import { ApprovalBadge, EventStatusBadge } from "@/components/StatusBadges";
 import { EventThumb } from "@/pages/Dashboard";
 import { eventPhase, formatDate, formatMoney, formatNumber, formatTime, percent } from "@/lib/utils";
 import { listEvents, type EventSummary } from "@/services/admin";
@@ -196,13 +196,7 @@ export default function Events() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="max-w-[260px] truncate font-semibold text-foreground">{e.name}</span>
-                          {e.approval === "pending" ? (
-                            <Badge variant="warning">Waiting for approval</Badge>
-                          ) : e.approval === "rejected" ? (
-                            <Badge variant="destructive">Rejected</Badge>
-                          ) : (
-                            !e.isListed && <Badge variant="warning">Not on site</Badge>
-                          )}
+                          {e.approval !== "approved" ? <ApprovalBadge approval={e.approval} /> : !e.isListed && <Badge variant="warning">Not on site</Badge>}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">{e.venue}</div>
                       </div>

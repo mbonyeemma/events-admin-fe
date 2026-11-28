@@ -1,7 +1,7 @@
 import { Gift } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { eventPhase } from "@/lib/utils";
-import type { ScanOutcome, TicketStatus } from "@/services/admin";
+import type { EventApproval, ScanOutcome, TicketStatus } from "@/services/admin";
 
 export function TicketStatusBadge({ status }: { status: TicketStatus }) {
   if (status === "used") return <Badge variant="success">Checked in</Badge>;
@@ -38,6 +38,14 @@ export function EventStatusBadge({ startsAt, isActive }: { startsAt: string; isA
   if (phase === "today") return <Badge variant="solid">Today</Badge>;
   if (phase === "past") return <Badge variant="muted">Ended</Badge>;
   return <Badge>Upcoming</Badge>;
+}
+
+/** An organiser's event that isn't approved yet. Nothing for approved events. */
+export function ApprovalBadge({ approval }: { approval: EventApproval }) {
+  if (approval === "pending") return <Badge variant="warning">Waiting for approval</Badge>;
+  if (approval === "draft") return <Badge variant="muted">Draft</Badge>;
+  if (approval === "rejected") return <Badge variant="destructive">Rejected</Badge>;
+  return null;
 }
 
 export function RoleBadge({ role }: { role: "ticket_checker" | "admin" }) {
